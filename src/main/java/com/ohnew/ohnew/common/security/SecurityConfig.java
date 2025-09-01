@@ -51,8 +51,10 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "login/page",
                                 "/kakao/callback",
+                                "/api/users/kakao-login",
                                 "/api/users/local/signup",
-                                "/api/users/local/login"
+                                "/api/users/local/login",
+                                "/api/users/refresh"
                         ).permitAll()
 
                         // 정적 리소스 (이미지, CSS, JS, webjars 등)
