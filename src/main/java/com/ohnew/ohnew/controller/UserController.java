@@ -37,7 +37,14 @@ public class UserController {
 //    @PostMapping("/login")
 //    public ApiResponse<UserDtoRes.UserLoginRes> login(@RequestBody @Valid UserDtoReq.LoginReq loginDto, HttpServletRequest request, HttpServletResponse response) {
 //        return ApiResponse.onSuccess(userService.login(request,response,loginDto));
-//    }
+/**
+     * Logs out the current user by invalidating the request's access token.
+     *
+     * The method resolves the access token from the incoming HTTP request using the
+     * JWT token provider and delegates token invalidation to the user service.
+     *
+     * @return an ApiResponse signaling success (SuccessStatus._OK)
+     */
 
     @Operation(summary = "로그아웃(앱)", description = "액세스 토큰을 무효화하여 로그아웃")
     @PostMapping("/logout")

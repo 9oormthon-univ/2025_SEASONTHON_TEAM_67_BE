@@ -30,6 +30,19 @@ public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
 
+    /**
+     * Configures and builds the application's SecurityFilterChain.
+     *
+     * <p>Disables CSRF, enables CORS using the configured CorsConfigurationSource, and sets
+     * session management to stateless. Defines authorization rules that permit public access
+     * to documentation, health check, authentication endpoints (including the Kakao and local
+     * login/refresh endpoints), and common static resources; all other requests require authentication.
+     * Registers custom access-denied and authentication-entry-point handlers and inserts the JWT
+     * authentication filter and an upstream exception handler filter into the filter chain.
+     *
+     * @return the configured SecurityFilterChain
+     * @throws Exception if an error occurs while configuring or building the security chain
+     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(csrf -> csrf.disable()) // CSRF 비활성화
