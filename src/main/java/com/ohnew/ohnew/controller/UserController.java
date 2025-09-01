@@ -41,8 +41,8 @@ public class UserController {
 
     @Operation(summary = "로그아웃(앱)", description = "액세스 토큰을 무효화하여 로그아웃")
     @PostMapping("/logout")
-    public ApiResponse<SuccessStatus> logout(
-            @RequestHeader(value = "Authorization", required = false) String accessToken) {
+    public ApiResponse<SuccessStatus> logout(){
+        String accessToken = jwtTokenProvider.resolveAccessToken();
 
         userService.logout(accessToken);
         return ApiResponse.onSuccess(SuccessStatus._OK);
