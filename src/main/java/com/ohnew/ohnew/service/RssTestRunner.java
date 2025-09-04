@@ -1,5 +1,7 @@
 package com.ohnew.ohnew.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ohnew.ohnew.dto.res.RssResponseDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
@@ -12,7 +14,14 @@ public class RssTestRunner implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        System.out.println("RSS 테스트를 시작합니다...");
-        rssService.fetchAndDisplayRssData();
+
+        RssResponseDto response = rssService.fetchAndDisplayRssData();
+        
+        // JSON 형태로 출력
+        ObjectMapper objectMapper = new ObjectMapper();
+        String jsonResponse = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(response);
+        
+        System.out.println("\n=== RSS 데이터 JSON 형태 ===");
+        System.out.println(jsonResponse);
     }
 }

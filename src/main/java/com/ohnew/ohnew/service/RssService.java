@@ -1,5 +1,7 @@
 package com.ohnew.ohnew.service;
 
+import com.ohnew.ohnew.dto.res.ArticleDto;
+import com.ohnew.ohnew.dto.res.RssResponseDto;
 import com.rometools.rome.feed.synd.SyndEntry;
 import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
@@ -11,6 +13,7 @@ import org.jsoup.nodes.Element;
 import org.springframework.stereotype.Service;
 
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -19,7 +22,7 @@ public class RssService {
 
     private static final String RSS_URL = "https://news.sbs.co.kr/news/TopicRssFeed.do?plink=RSSREADER";
 
-    public void fetchAndDisplayRssData() {
+    public RssResponseDto fetchAndDisplayRssData() {
         try {
             // RSS 피드 읽기
             URL feedUrl = new URL(RSS_URL);
@@ -27,6 +30,7 @@ public class RssService {
             SyndFeed feed = input.build(new XmlReader(feedUrl));
 
             List<SyndEntry> entries = feed.getEntries();
+            List<ArticleDto> articles = new ArrayList<>();
             
             System.out.println("=== SBS RSS 뉴스 데이터 ===");
             System.out.println("총 " + entries.size() + "개의 뉴스를 찾았습니다.\n");
@@ -44,22 +48,31 @@ public class RssService {
                     category = entry.getCategories().get(0).getName();
                 }
 
-                System.out.println("--- 뉴스 " + (i + 1) + " ---");
-                System.out.println("제목 (Title): " + title);
-                System.out.println("GUID: " + guid);
-                System.out.println("카테고리 (Category): " + category);
-                System.out.println("링크 (Link): " + link);
-                
                 // 링크에서 .text_area 영역의 데이터 추출
                 String textAreaContent = extractTextAreaContent(link);
-                System.out.println("본문 내용 (.text_area): ");
-                System.out.println(textAreaContent);
-                System.out.println("==========================================\n");
+
+                // DTO 생성
+                ArticleDto article = ArticleDto.builder()
+                        .articleId(String.valueOf(i + 1))
+                        .title(title)
+                        .body(textAreaContent)
+                        .build();
+                
+                articles.add(article);
             }
+
+            return RssResponseDto.builder()
+                    .items(articles)
+                    .build();
 
         } catch (Exception e) {
             log.error("RSS 데이터를 가져오는 중 오류 발생: ", e);
             System.out.println("RSS 데이터를 가져오는 중 오류가 발생했습니다: " + e.getMessage());
+            
+            // 오류 발생 시 빈 응답 반환
+            return RssResponseDto.builder()
+                    .items(new ArrayList<>())
+                    .build();
         }
     }
 
