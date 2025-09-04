@@ -1,116 +1,142 @@
 package com.ohnew.ohnew.service;
 
-import com.ohnew.ohnew.dto.req.RssAIReq;
-import com.ohnew.ohnew.entity.NewsArticle;
-import com.ohnew.ohnew.repository.NewsArticleRepository;
 import com.ohnew.ohnew.dto.req.NewsArticleReq;
 import com.rometools.rome.feed.synd.SyndEntry;
+import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
 import com.rometools.rome.io.XmlReader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Flux;
 
-import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
-@Slf4j
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class RssService {
 
-    private static final Logger logger = LoggerFactory.getLogger(RssService.class);
+    private static final List<String> RSS_URLS = List.of(
+            "https://rss.cnn.com/rss/edition.rss",
+            "https://feeds.bbci.co.uk/news/rss.xml",
+            "https://rss.donga.com/total.xml",
+            "http://www.yonhapnews.co.kr/RSS/economy.xml"
+    );
 
-    private final WebClient webClient;
-    private final NewsArticleRepository newsArticleRepository;
-
-    public void fetchRssLinksAndSave(String rssUrl, String pythonApiUrl) {
-        webClient.get()
-                .uri(rssUrl)
-                .retrieve()
-                .bodyToMono(String.class)
-                .flatMapMany(xml -> {
-                    try {
-                        SyndFeedInput input = new SyndFeedInput();
-                        List<SyndEntry> entries = input.build(
-                                new XmlReader(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)))
-                        ).getEntries();
-
-                        return Flux.fromIterable(entries);
-                    } catch (Exception e) {
-                        logger.error("RSS 파싱 중 예외 발생: {}", e.getMessage(), e);
-                        return Flux.empty();
-                    }
-                })
-                .collectList() // 🔑 여기서 리스트로 모아서 한번에 처리 가능
-                .subscribe(entries -> {
-                    List<NewsArticleReq> requestList = new ArrayList<>();
-
-                    for (SyndEntry entry : entries) {
-                        String link = entry.getUri() != null ? entry.getUri() : entry.getLink();
-
-                        if (!newsArticleRepository.existsByLink(link)) {
-                            NewsArticle article = new NewsArticle();
-                            article.setLink(link);
-                            newsArticleRepository.save(article);
-
-                            logger.info("링크 저장: {}", link);
-
-                            // 개별 API 호출용 DTO
-                            NewsArticleReq req = NewsArticleReq.builder()
-                                    .articleId(String.valueOf(article.getId()))
-                                    .title(entry.getTitle())
-                                    .build();
-
-                            requestList.add(req);
-
-                            // 개별 호출 (원래 방식)
-                            sendSingleArticleToAI(req, pythonApiUrl, article);
-                        }
-                    }
-
-                    // 여러 개 한꺼번에 전송
-                    if (!requestList.isEmpty()) {
-                        sendBatchArticlesToAI(requestList, pythonApiUrl);
-                    }
-                });
+    /**
+     * RSS 피드에서 뉴스 기사들을 파싱하여 NewsArticleReq 리스트로 반환
+     */
+    public List<NewsArticleReq> fetchNewsFromRss() {
+        List<NewsArticleReq> articles = new ArrayList<>();
+        
+        for (String rssUrl : RSS_URLS) {
+            try {
+                log.info("RSS 피드 파싱 시작: {}", rssUrl);
+                articles.addAll(parseRssFeed(rssUrl));
+            } catch (Exception e) {
+                log.error("RSS 피드 파싱 실패: {}, 오류: {}", rssUrl, e.getMessage());
+            }
+        }
+        
+        log.info("총 {}개의 뉴스 기사 파싱 완료", articles.size());
+        return articles;
     }
 
-    private void sendSingleArticleToAI(NewsArticleReq req, String pythonApiUrl, NewsArticle article) {
-        webClient.post()
-                .uri(pythonApiUrl)
-                .bodyValue(req)
-                .retrieve()
-                .bodyToMono(NewsArticleReq.class)
-                .subscribe(result -> {
-                    article.setTitle(result.getTitle());
-                    article.setSummary(result.getBody());
-                    article.setAiProcessed(true);
-                    newsArticleRepository.save(article);
-                    logger.info("AI 처리 후 업데이트 완료: {}", article.getId());
-                }, ex -> {
-                    logger.warn("AI 처리 실패: {}, error: {}", article.getId(), ex.getMessage());
-                });
+    /**
+     * 특정 RSS URL에서 뉴스 기사들을 파싱
+     */
+    private List<NewsArticleReq> parseRssFeed(String rssUrl) throws Exception {
+        List<NewsArticleReq> articles = new ArrayList<>();
+        
+        SyndFeedInput input = new SyndFeedInput();
+        SyndFeed feed = input.build(new XmlReader(new URL(rssUrl)));
+        
+        for (SyndEntry entry : feed.getEntries()) {
+            try {
+                String title = entry.getTitle();
+                String link = entry.getLink();
+                String description = entry.getDescription() != null 
+                    ? entry.getDescription().getValue() 
+                    : "";
+                
+                // HTML 태그 제거
+                String cleanBody = cleanHtmlTags(description);
+                
+                // 본문이 너무 짧으면 링크에서 추가 내용 추출 시도
+                if (cleanBody.length() < 100 && link != null) {
+                    cleanBody = extractContentFromUrl(link, cleanBody);
+                }
+                
+                NewsArticleReq article = NewsArticleReq.builder()
+                        .articleId(generateArticleId(link))
+                        .title(title)
+                        .body(cleanBody)
+                        .build();
+                
+                articles.add(article);
+                
+            } catch (Exception e) {
+                log.warn("뉴스 기사 파싱 중 오류 발생: {}", e.getMessage());
+            }
+        }
+        
+        return articles;
     }
 
-    private void sendBatchArticlesToAI(List<NewsArticleReq> requestList, String pythonApiUrl) {
-        RssAIReq batchReq = RssAIReq.builder()
-                .items(requestList)
-                .build();
+    /**
+     * HTML 태그 제거 및 텍스트 정리
+     */
+    private String cleanHtmlTags(String html) {
+        if (html == null || html.isEmpty()) {
+            return "";
+        }
+        
+        // Jsoup을 사용하여 HTML 태그 제거
+        Document doc = Jsoup.parse(html);
+        String text = doc.text();
+        
+        // 연속된 공백 제거
+        return text.replaceAll("\\s+", " ").trim();
+    }
 
-        webClient.post()
-                .uri(pythonApiUrl + "/batch") // ✅ 배치 처리 엔드포인트 예시
-                .bodyValue(batchReq)
-                .retrieve()
-                .bodyToMono(Void.class) // 파이썬 쪽에서 응답 형식에 맞게 수정
-                .doOnSuccess(result -> logger.info("배치 AI 처리 완료. 기사 개수: {}", requestList.size()))
-                .doOnError(  ex -> logger.error("배치 AI 처리 실패: {}", ex.getMessage()))
-                .subscribe();
+    /**
+     * URL에서 추가 컨텐츠 추출 (간단한 버전)
+     */
+    private String extractContentFromUrl(String url, String fallbackContent) {
+        try {
+            // 타임아웃 설정으로 빠른 추출
+            Document doc = Jsoup.connect(url)
+                    .timeout(5000)
+                    .get();
+            
+            // 주요 컨텐츠 영역에서 텍스트 추출
+            String content = doc.select("article, .content, .article-body, p").text();
+            
+            if (content.length() > 100) {
+                // 너무 긴 경우 적절히 자르기 (2000자 제한)
+                return content.length() > 2000 ? content.substring(0, 2000) + "..." : content;
+            }
+            
+        } catch (Exception e) {
+            log.debug("URL에서 컨텐츠 추출 실패: {}", url);
+        }
+        
+        return fallbackContent;
+    }
+
+    /**
+     * 링크를 기반으로 고유한 기사 ID 생성
+     */
+    private String generateArticleId(String link) {
+        if (link == null) {
+            return String.valueOf(System.currentTimeMillis());
+        }
+        
+        // URL의 해시코드를 사용하여 간단한 ID 생성
+        return String.valueOf(Math.abs(link.hashCode()));
     }
 }

@@ -5,12 +5,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class NewsArticleBatchReq {
-    private List<NewsArticleReq> items;
+public class ChatMessageReq {
+    private String message;  // 사용자가 입력한 메시지
 }

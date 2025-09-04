@@ -6,7 +6,6 @@ import lombok.*;
 
 @Entity
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -15,20 +14,24 @@ public class NewsArticle extends BaseEntity { // BaseEntity : createdAt, updated
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, length = 500)
     private String title;
 
+    @Column(length = 2000)
     private String summary;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 1000)
     private String link;
 
+    @Column(length = 500)
     private String suggestedQuestions1;
 
+    @Column(length = 500)
     private String suggestedQuestions2;
 
+    @Column(length = 500)
     private String suggestedQuestions3;
 
+    @Column(length = 100)
     private String tag;
-
-    private boolean aiProcessed = false; // AI 처리 여부
 }
