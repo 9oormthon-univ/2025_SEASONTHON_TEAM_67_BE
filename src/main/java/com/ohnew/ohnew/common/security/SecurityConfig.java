@@ -57,6 +57,9 @@ public class SecurityConfig {
                                 "/api/users/refresh"
                         ).permitAll()
 
+                        // RSS 테스트 API (개발/테스트 목적)
+                        .requestMatchers("/api/rss/**").permitAll()
+
                         // 정적 리소스 (이미지, CSS, JS, webjars 등)
                         .requestMatchers(
                                 "/",
