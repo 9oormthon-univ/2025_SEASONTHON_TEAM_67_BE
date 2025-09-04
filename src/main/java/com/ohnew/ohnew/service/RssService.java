@@ -1,142 +1,89 @@
 package com.ohnew.ohnew.service;
 
-import com.ohnew.ohnew.dto.req.NewsArticleReq;
 import com.rometools.rome.feed.synd.SyndEntry;
 import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
 import com.rometools.rome.io.XmlReader;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.springframework.stereotype.Service;
 
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class RssService {
 
-    private static final List<String> RSS_URLS = List.of(
-            "https://rss.cnn.com/rss/edition.rss",
-            "https://feeds.bbci.co.uk/news/rss.xml",
-            "https://rss.donga.com/total.xml",
-            "http://www.yonhapnews.co.kr/RSS/economy.xml"
-    );
+    private static final String RSS_URL = "https://news.sbs.co.kr/news/TopicRssFeed.do?plink=RSSREADER";
 
-    /**
-     * RSS 피드에서 뉴스 기사들을 파싱하여 NewsArticleReq 리스트로 반환
-     */
-    public List<NewsArticleReq> fetchNewsFromRss() {
-        List<NewsArticleReq> articles = new ArrayList<>();
-        
-        for (String rssUrl : RSS_URLS) {
-            try {
-                log.info("RSS 피드 파싱 시작: {}", rssUrl);
-                articles.addAll(parseRssFeed(rssUrl));
-            } catch (Exception e) {
-                log.error("RSS 피드 파싱 실패: {}, 오류: {}", rssUrl, e.getMessage());
-            }
-        }
-        
-        log.info("총 {}개의 뉴스 기사 파싱 완료", articles.size());
-        return articles;
-    }
-
-    /**
-     * 특정 RSS URL에서 뉴스 기사들을 파싱
-     */
-    private List<NewsArticleReq> parseRssFeed(String rssUrl) throws Exception {
-        List<NewsArticleReq> articles = new ArrayList<>();
-        
-        SyndFeedInput input = new SyndFeedInput();
-        SyndFeed feed = input.build(new XmlReader(new URL(rssUrl)));
-        
-        for (SyndEntry entry : feed.getEntries()) {
-            try {
-                String title = entry.getTitle();
-                String link = entry.getLink();
-                String description = entry.getDescription() != null 
-                    ? entry.getDescription().getValue() 
-                    : "";
-                
-                // HTML 태그 제거
-                String cleanBody = cleanHtmlTags(description);
-                
-                // 본문이 너무 짧으면 링크에서 추가 내용 추출 시도
-                if (cleanBody.length() < 100 && link != null) {
-                    cleanBody = extractContentFromUrl(link, cleanBody);
-                }
-                
-                NewsArticleReq article = NewsArticleReq.builder()
-                        .articleId(generateArticleId(link))
-                        .title(title)
-                        .body(cleanBody)
-                        .build();
-                
-                articles.add(article);
-                
-            } catch (Exception e) {
-                log.warn("뉴스 기사 파싱 중 오류 발생: {}", e.getMessage());
-            }
-        }
-        
-        return articles;
-    }
-
-    /**
-     * HTML 태그 제거 및 텍스트 정리
-     */
-    private String cleanHtmlTags(String html) {
-        if (html == null || html.isEmpty()) {
-            return "";
-        }
-        
-        // Jsoup을 사용하여 HTML 태그 제거
-        Document doc = Jsoup.parse(html);
-        String text = doc.text();
-        
-        // 연속된 공백 제거
-        return text.replaceAll("\\s+", " ").trim();
-    }
-
-    /**
-     * URL에서 추가 컨텐츠 추출 (간단한 버전)
-     */
-    private String extractContentFromUrl(String url, String fallbackContent) {
+    public void fetchAndDisplayRssData() {
         try {
-            // 타임아웃 설정으로 빠른 추출
-            Document doc = Jsoup.connect(url)
-                    .timeout(5000)
-                    .get();
+            // RSS 피드 읽기
+            URL feedUrl = new URL(RSS_URL);
+            SyndFeedInput input = new SyndFeedInput();
+            SyndFeed feed = input.build(new XmlReader(feedUrl));
+
+            List<SyndEntry> entries = feed.getEntries();
             
-            // 주요 컨텐츠 영역에서 텍스트 추출
-            String content = doc.select("article, .content, .article-body, p").text();
-            
-            if (content.length() > 100) {
-                // 너무 긴 경우 적절히 자르기 (2000자 제한)
-                return content.length() > 2000 ? content.substring(0, 2000) + "..." : content;
+            System.out.println("=== SBS RSS 뉴스 데이터 ===");
+            System.out.println("총 " + entries.size() + "개의 뉴스를 찾았습니다.\n");
+
+            for (int i = 0; i < entries.size(); i++) {
+                SyndEntry entry = entries.get(i);
+                
+                String title = entry.getTitle();
+                String guid = entry.getUri();
+                String link = entry.getLink();
+                
+                // 카테고리 추출
+                String category = "";
+                if (entry.getCategories() != null && !entry.getCategories().isEmpty()) {
+                    category = entry.getCategories().get(0).getName();
+                }
+
+                System.out.println("--- 뉴스 " + (i + 1) + " ---");
+                System.out.println("제목 (Title): " + title);
+                System.out.println("GUID: " + guid);
+                System.out.println("카테고리 (Category): " + category);
+                System.out.println("링크 (Link): " + link);
+                
+                // 링크에서 .text_area 영역의 데이터 추출
+                String textAreaContent = extractTextAreaContent(link);
+                System.out.println("본문 내용 (.text_area): ");
+                System.out.println(textAreaContent);
+                System.out.println("==========================================\n");
             }
-            
+
         } catch (Exception e) {
-            log.debug("URL에서 컨텐츠 추출 실패: {}", url);
+            log.error("RSS 데이터를 가져오는 중 오류 발생: ", e);
+            System.out.println("RSS 데이터를 가져오는 중 오류가 발생했습니다: " + e.getMessage());
         }
-        
-        return fallbackContent;
     }
 
-    /**
-     * 링크를 기반으로 고유한 기사 ID 생성
-     */
-    private String generateArticleId(String link) {
-        if (link == null) {
-            return String.valueOf(System.currentTimeMillis());
+    private String extractTextAreaContent(String url) {
+        try {
+            // Jsoup을 사용하여 웹페이지 파싱
+            Document doc = Jsoup.connect(url)
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                    .timeout(10000)
+                    .get();
+
+            // .text_area 클래스를 가진 요소 찾기
+            Element textAreaElement = doc.selectFirst(".text_area");
+            
+            if (textAreaElement != null) {
+                // HTML 태그 제거하고 텍스트만 추출
+                return textAreaElement.text();
+            } else {
+                return "본문 내용을 찾을 수 없습니다.";
+            }
+
+        } catch (Exception e) {
+            log.error("웹페이지 파싱 중 오류 발생: " + url, e);
+            return "본문 내용을 가져오는 중 오류가 발생했습니다: " + e.getMessage();
         }
-        
-        // URL의 해시코드를 사용하여 간단한 ID 생성
-        return String.valueOf(Math.abs(link.hashCode()));
     }
 }
