@@ -12,15 +12,10 @@ public class RssRunService implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        String url = "https://news.sbs.co.kr/news/TopicRssFeed.do?plink=RSSREADER";
+        String RSS_URL = "https://news.sbs.co.kr/news/TopicRssFeed.do?plink=RSSREADER";
+        String Single_RSS_AI_URL = "http://localhost:8000/v1/rewrite-summarize";
 
-        rssService.fetchRssFeedAndCrawl(url)
-                .subscribe(article -> {
-                    System.out.println("ArticleId: " + article.getArticleId());
-                    System.out.println("Title: " + article.getTitle());
-                    System.out.println("body: " + article.getBody());
-                    System.out.println("----------------------------");
-                });
+        rssService.fetchRssLinksAndSave(RSS_URL, Single_RSS_AI_URL);
 
         System.out.println("RSS 요청 후 바로 이 메시지가 출력됩니다 (비동기 처리 확인).");
     }

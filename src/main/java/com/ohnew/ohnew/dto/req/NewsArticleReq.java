@@ -5,12 +5,12 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class RssAIReq {
-    private List<NewsArticleReq> items;
+public class NewsArticleReq {
+    private String articleId;   // 기사 ID
+    private String title;       // 기사 제목
+    private String body;        // 기사 본문
 }
