@@ -8,7 +8,7 @@ public class HealthController {
 
     @GetMapping("/health")
     public String health() {
-        return "재 배포 성공";
+        return "재 배포 성공2";
     }
 
 }
