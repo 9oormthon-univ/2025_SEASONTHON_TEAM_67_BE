@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ArticleDto {
+public class RssNewsRes {
     private String articleId;
     private String title;
     private String body;

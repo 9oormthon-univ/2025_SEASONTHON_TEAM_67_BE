@@ -11,6 +11,6 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class RssResponseDto {
-    private List<ArticleDto> items;
+public class RssNewsMultiRes {
+    private List<RssNewsRes> items;
 }

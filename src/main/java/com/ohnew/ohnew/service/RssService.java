@@ -1,7 +1,7 @@
 package com.ohnew.ohnew.service;
 
-import com.ohnew.ohnew.dto.res.ArticleDto;
-import com.ohnew.ohnew.dto.res.RssResponseDto;
+import com.ohnew.ohnew.dto.res.RssNewsRes;
+import com.ohnew.ohnew.dto.res.RssNewsMultiRes;
 import com.rometools.rome.feed.synd.SyndEntry;
 import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
@@ -22,7 +22,7 @@ public class RssService {
 
     private static final String RSS_URL = "https://news.sbs.co.kr/news/TopicRssFeed.do?plink=RSSREADER";
 
-    public RssResponseDto fetchAndDisplayRssData() {
+    public RssNewsMultiRes fetchAndDisplayRssData() {
         try {
             // RSS 피드 읽기
             URL feedUrl = new URL(RSS_URL);
@@ -30,7 +30,7 @@ public class RssService {
             SyndFeed feed = input.build(new XmlReader(feedUrl));
 
             List<SyndEntry> entries = feed.getEntries();
-            List<ArticleDto> articles = new ArrayList<>();
+            List<RssNewsRes> articles = new ArrayList<>();
             
             System.out.println("=== SBS RSS 뉴스 데이터 ===");
             System.out.println("총 " + entries.size() + "개의 뉴스를 찾았습니다.\n");
@@ -52,7 +52,7 @@ public class RssService {
                 String textAreaContent = extractTextAreaContent(link);
 
                 // DTO 생성
-                ArticleDto article = ArticleDto.builder()
+                RssNewsRes article = RssNewsRes.builder()
                         .articleId(String.valueOf(i + 1))
                         .title(title)
                         .body(textAreaContent)
@@ -61,7 +61,7 @@ public class RssService {
                 articles.add(article);
             }
 
-            return RssResponseDto.builder()
+            return RssNewsMultiRes.builder()
                     .items(articles)
                     .build();
 
@@ -70,7 +70,7 @@ public class RssService {
             System.out.println("RSS 데이터를 가져오는 중 오류가 발생했습니다: " + e.getMessage());
             
             // 오류 발생 시 빈 응답 반환
-            return RssResponseDto.builder()
+            return RssNewsMultiRes.builder()
                     .items(new ArrayList<>())
                     .build();
         }
