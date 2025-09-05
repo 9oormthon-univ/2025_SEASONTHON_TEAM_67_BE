@@ -12,14 +12,3 @@ spring:
     time-zone: Asia/Seoul
   profiles:
     active: deploy
-
-# Python AI API 설정
-python:
-  api:
-    url: http://localhost:8000
-    single:
-      endpoint: /v1/rewrite-summarize
-    batch:
-      endpoint: /v1/rewrite-batch
-    chat:
-      endpoint: /v1/chat-article
