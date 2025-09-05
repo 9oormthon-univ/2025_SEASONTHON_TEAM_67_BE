@@ -4,7 +4,7 @@ import com.ohnew.ohnew.global.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 
@@ -29,8 +29,8 @@ public class News extends BaseEntity {
     // 원본 기사 URL
     private String originalUrl;
 
-    // 원본 기사 생성(발행) 시각
-    private LocalDateTime originalPublishedAt;
+    // 원본 기사 생성(발행) 날짜
+    private LocalDate originalPublishedAt;
 
     // 기사 태그 (간단 버전: 문자열 Set)
     @ElementCollection
