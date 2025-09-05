@@ -35,12 +35,16 @@ dependencies {
 
 	implementation 'javax.xml.bind:jaxb-api:2.3.1'
 
+    // HTML Parsing
+    implementation 'org.jsoup:jsoup:1.16.1'
+    implementation 'com.rometools:rome:1.18.0'
+
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 
 	//Swagger
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
 
-	//Redis
+    //Redis
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
 	//Webflux
