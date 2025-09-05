@@ -5,12 +5,12 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class RssNewsRes {
-    private String articleId;
-    private String title;
-    private String body;
+public class NewsByRssMultiRes {
+    private List<NewsByRssRes> items;
 }

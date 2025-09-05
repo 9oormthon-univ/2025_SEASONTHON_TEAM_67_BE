@@ -1,7 +1,7 @@
 package com.ohnew.ohnew.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ohnew.ohnew.dto.res.RssNewsMultiRes;
+import com.ohnew.ohnew.dto.res.NewsByRssMultiRes;
 import com.ohnew.ohnew.service.RssService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -16,7 +16,7 @@ public class RssTestRunner implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
 
-        RssNewsMultiRes response = rssService.fetchAndDisplayRssData();
+        NewsByRssMultiRes response = rssService.fetchAndDisplayRssData();
         
         // JSON 형태로 출력
         ObjectMapper objectMapper = new ObjectMapper();
