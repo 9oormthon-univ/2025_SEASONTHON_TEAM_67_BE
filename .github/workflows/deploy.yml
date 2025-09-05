@@ -1,0 +1,28 @@
+name: deploy-spring
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Spring project (Gradle)
+        run: |
+          cd $env:GITHUB_WORKSPACE
+          ./gradlew clean build -x test
+        shell: powershell
+
+      - name: Copy JAR to C:\apps\spring\build\libs\app.jar
+        shell: powershell
+        run: |
+          $jar = Get-ChildItem -Path "$env:GITHUB_WORKSPACE\build\libs" -Filter "*.jar" | Select-Object -First 1
+          Copy-Item $jar.FullName "C:\apps\spring\build\libs\app.jar" -Force
+
+      - name: Restart spring-app (NSSM)
+        shell: powershell
+        run: |
+          C:\nssm\nssm.exe restart spring-app
