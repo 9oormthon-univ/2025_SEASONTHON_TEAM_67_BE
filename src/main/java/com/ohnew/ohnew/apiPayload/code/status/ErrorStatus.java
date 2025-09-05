@@ -36,7 +36,12 @@ public enum ErrorStatus implements BaseErrorCode {
     //로그인 관련
     EMAIL_REGISTERED_WITH_KAKAO(HttpStatus.BAD_REQUEST, "AUTH4006", "해당 이메일은 카카오 계정으로 가입되어 있습니다."),
     EMAIL_REGISTERED_WITH_LOCAL(HttpStatus.BAD_REQUEST, "AUTH4007", "이미 로컬 계정으로 가입되어 있습니다."),
-    LOCAL_LOGIN_FOR_KAKAO_EMAIL(HttpStatus.UNAUTHORIZED, "AUTH4008", "카카오 계정으로 로그인해주세요.");
+    LOCAL_LOGIN_FOR_KAKAO_EMAIL(HttpStatus.UNAUTHORIZED, "AUTH4008", "카카오 계정으로 로그인해주세요."),
+
+    // 뉴스 관련 에러
+    NEWS_ARTICLE_NOT_FOUND(HttpStatus.NOT_FOUND, "NEWS4001", "해당 뉴스 기사를 찾을 수 없습니다."),
+    RSS_FETCH_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "NEWS5001", "RSS 데이터를 가져오는데 실패했습니다."),
+    AI_PROCESSING_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "NEWS5002", "AI 처리 중 오류가 발생했습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
