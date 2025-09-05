@@ -27,6 +27,7 @@ public enum ErrorStatus implements BaseErrorCode {
     _BAD_REQUEST(HttpStatus.BAD_REQUEST,"COMMON400","잘못된 요청입니다."),
     _UNAUTHORIZED(HttpStatus.UNAUTHORIZED,"COMMON401","인증이 필요합니다."),
     _FORBIDDEN(HttpStatus.FORBIDDEN, "COMMON403", "금지된 요청입니다."),
+    RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "RESOURCE404", "리소스를 찾을 수 없습니다."),
 
     //User
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER4004", "사용자를 찾을 수 없습니다."),
@@ -41,7 +42,10 @@ public enum ErrorStatus implements BaseErrorCode {
     // 뉴스 관련 에러
     NEWS_ARTICLE_NOT_FOUND(HttpStatus.NOT_FOUND, "NEWS4001", "해당 뉴스 기사를 찾을 수 없습니다."),
     RSS_FETCH_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "NEWS5001", "RSS 데이터를 가져오는데 실패했습니다."),
-    AI_PROCESSING_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "NEWS5002", "AI 처리 중 오류가 발생했습니다.");
+    AI_PROCESSING_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "NEWS5002", "AI 처리 중 오류가 발생했습니다."),
+
+    //챗봇 관련 에러
+    CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT404", "채팅방이 존재하지 않습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
