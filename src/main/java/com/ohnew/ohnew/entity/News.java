@@ -6,6 +6,7 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Getter
@@ -31,11 +32,11 @@ public class News extends BaseEntity {
     // 원본 기사 생성(발행) 시각
     private LocalDateTime originalPublishedAt;
 
-    // 기사 태그 (간단 버전: 문자열 리스트)
+    // 기사 태그 (간단 버전: 문자열 Set)
     @ElementCollection
     @CollectionTable(name = "news_tags", joinColumns = @JoinColumn(name = "news_id"))
     @Column(name = "tag")
-    private List<String> tags;
+    private Set<String> tags;
 
     // AI가 생성한 추천 질문(최대 4개 예상) - 간단 리스트로 저장
     @ElementCollection
