@@ -1,15 +1,12 @@
 package com.ohnew.ohnew.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ohnew.ohnew.apiPayload.code.exception.GeneralException;
 import com.ohnew.ohnew.apiPayload.code.status.ErrorStatus;
 import com.ohnew.ohnew.dto.res.NewsByPythonRes;
 import com.ohnew.ohnew.dto.res.NewsByRssRes;
-import com.ohnew.ohnew.dto.res.NewsByRssMultiRes;
-import com.ohnew.ohnew.dto.res.NewsDtoRes;
+import com.ohnew.ohnew.dto.res.NewsByMultiRssRes;
 import com.ohnew.ohnew.entity.News;
 import com.ohnew.ohnew.repository.NewsRepository;
-import com.rometools.rome.feed.synd.SyndCategory;
 import com.rometools.rome.feed.synd.SyndEntry;
 import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
@@ -24,8 +21,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.net.URL;
-import java.sql.SQLOutput;
-import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
@@ -42,13 +37,13 @@ public class RssServiceImpl implements RssService {
 
     @Override
     @Scheduled(fixedRate = 6 * 60 * 60 * 1000) // 6시간 *
-    public NewsByRssMultiRes fetchAndDisplayRssData() {
+    public NewsByMultiRssRes fetchAndDisplayRssData() {
         try {
             // 1. RSS 데이터 가져와서 DB에 저장
             List<NewsByRssRes> newsByRssResList = fetchAndSaveRssData();
 
             // 2. DTO 생성 후 Python API 호출
-            NewsByRssMultiRes multiRes = NewsByRssMultiRes.builder()
+            NewsByMultiRssRes multiRes = NewsByMultiRssRes.builder()
                     .items(newsByRssResList)
                     .build();
 
@@ -58,7 +53,7 @@ public class RssServiceImpl implements RssService {
 
         } catch (Exception e) {
             log.error("RSS 데이터를 가져오는 중 오류 발생: ", e);
-            return NewsByRssMultiRes.builder()
+            return NewsByMultiRssRes.builder()
                     .items(new ArrayList<>())
                     .build();
         }
@@ -118,7 +113,7 @@ public class RssServiceImpl implements RssService {
     /**
      * 파이썬 API 호출
      */
-    private void callPythonApi(NewsByRssMultiRes multiRes) {
+    private void callPythonApi(NewsByMultiRssRes multiRes) {
         try {
             // Python API 호출
             NewsByPythonRes pythonRes = webClient.post()

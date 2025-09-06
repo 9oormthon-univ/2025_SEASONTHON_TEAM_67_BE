@@ -32,6 +32,7 @@ public class NewsDtoRes {
         private LocalDate originalPublishedAt;
         private List<String> tags;
         private List<String> recommendedQuestions;
+        private List<String> quiz;
         private Boolean scrapped; // 유저 기준
     }
 

@@ -1,8 +1,8 @@
 package com.ohnew.ohnew.service;
 
 
-import com.ohnew.ohnew.dto.res.NewsByRssMultiRes;
+import com.ohnew.ohnew.dto.res.NewsByMultiRssRes;
 
 public interface RssService {
-    NewsByRssMultiRes fetchAndDisplayRssData();
+    NewsByMultiRssRes fetchAndDisplayRssData();
 }
