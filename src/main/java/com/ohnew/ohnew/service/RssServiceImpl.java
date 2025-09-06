@@ -29,13 +29,12 @@ import java.util.List;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class RssServiceImpl implements RssService {
+public class RssServiceImpl {
 
     private static final String RSS_URL = "https://news.sbs.co.kr/news/TopicRssFeed.do?plink=RSSREADER";
     private final NewsRepository newsRepository;
     private final WebClient webClient = WebClient.builder().build();
 
-    @Override
     @Scheduled(fixedRate = 6 * 60 * 60 * 1000) // 6시간 *
     public NewsByMultiRssRes fetchAndDisplayRssData() {
         try {
@@ -136,7 +135,9 @@ public class RssServiceImpl implements RssService {
                                         .id(news.getId())
                                         .title(item.getData().getNewTitle())
                                         .summary(item.getData().getSummary()) // 여기서 새로운 summary 적용
+                                        .originalUrl(news.getOriginalUrl())
                                         .quizQuestion(item.getData().getQuiz().getQuestion())
+                                        .recommendedQuestions(item.getData().getQuestions())
                                         .quizAnswer(item.getData().getQuiz().getAnswer())
                                         .originalPublishedAt(news.getOriginalPublishedAt())
                                         .build();

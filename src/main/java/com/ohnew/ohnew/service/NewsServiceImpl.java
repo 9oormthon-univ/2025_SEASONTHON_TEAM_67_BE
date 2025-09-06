@@ -66,9 +66,16 @@ public class NewsServiceImpl implements NewsService {
     }
 
     @Override
-    public List<NewsDtoRes.NewsDetailRes> getTodayNews() {
-        return newsRepository.findAll().stream()
-                .map(s -> NewsConverter.toDetail(s, true))
+    public List<NewsDtoRes.NewsDetailRes> getTodayNews(Long userId) {
+        // 1. 사용자 확인 (없으면 예외)
+        getUserOrThrow(userId);
+
+        // 2. 오늘 날짜 기준으로 뉴스 조회
+        return newsRepository.findAllByOrderByCreatedAtDesc().stream()
+                .map(news -> {
+                    boolean scrapped = scrapRepository.existsByUserIdAndNewsId(userId, news.getId());
+                    return NewsConverter.toDetail(news, scrapped);
+                })
                 .toList();
     }
 }

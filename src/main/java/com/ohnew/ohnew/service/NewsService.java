@@ -10,5 +10,5 @@ public interface NewsService {
     void scrap(Long userId, Long newsId);
     void unscrap(Long userId, Long newsId);
     List<NewsDtoRes.NewsSummaryRes> getMyScrapList(Long userId);
-    List<NewsDtoRes.NewsDetailRes> getTodayNews();
+    List<NewsDtoRes.NewsDetailRes> getTodayNews(Long userId);
 }

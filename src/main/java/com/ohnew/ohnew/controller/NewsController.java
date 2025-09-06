@@ -52,7 +52,8 @@ public class NewsController {
     @Operation(summary = "오늘의 뉴스 리스트 조회", description = "퀴즈 포함 뉴스 목록")
     @GetMapping("/today")
     public ApiResponse<List<NewsDtoRes.NewsDetailRes>> getTodayScraps() {
-        return ApiResponse.onSuccess(newsService.getTodayNews());
+        Long userId = jwtTokenProvider.getUserIdFromToken();
+        return ApiResponse.onSuccess(newsService.getTodayNews(userId));
     }
 
 }
