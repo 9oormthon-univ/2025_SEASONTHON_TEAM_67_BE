@@ -34,4 +34,10 @@ public class NewsDtoRes {
         private List<String> recommendedQuestions;
         private Boolean scrapped; // 유저 기준
     }
+
+//    @Getter
+//    @Builder
+//    @AllArgsConstructor
+//    @JsonInclude(JsonInclude.Include.NON_NULL)
+//    public static class News
 }

@@ -4,6 +4,7 @@ import com.ohnew.ohnew.global.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import javax.naming.Name;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
@@ -27,6 +28,7 @@ public class News extends BaseEntity {
     private String summary;
 
     // 원본 기사 URL
+    @Column(unique = true)
     private String originalUrl;
 
     // 원본 기사 생성(발행) 날짜
@@ -43,4 +45,10 @@ public class News extends BaseEntity {
     @CollectionTable(name = "news_recommended_questions", joinColumns = @JoinColumn(name = "news_id"))
     @Column(name = "question")
     private List<String> recommendedQuestions;
+
+    @Column(name = "quiz")
+    private String quiz;
+
+    @Column(name = "quiz_answer")
+    private String quizAnswer;
 }
