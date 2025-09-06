@@ -21,8 +21,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.net.URL;
+import java.sql.SQLOutput;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -77,8 +79,9 @@ public class RssServiceImpl {
                         : "";
                 Date pubDate = entry.getPublishedDate();
 
-                System.out.println("title: " + title);
-                System.out.println("link: " + link);
+                System.out.println("Title: " + title);
+                System.out.println("Link: " + link);
+                System.out.println("Tags: " + category);
 
                 // 이미 DB에 있으면 skip
                 if (newsRepository.existsByOriginalUrl(link)) {
@@ -93,6 +96,7 @@ public class RssServiceImpl {
                                 .originalPublishedAt(pubDate.toInstant()
                                         .atZone(ZoneId.systemDefault())
                                         .toLocalDate())
+                                .tags(Collections.singleton(category))
                                 .build()
                 );
 
@@ -135,6 +139,7 @@ public class RssServiceImpl {
                                         .id(news.getId())
                                         .title(item.getData().getNewTitle())
                                         .summary(item.getData().getSummary()) // 여기서 새로운 summary 적용
+                                        .tags(news.getTags())
                                         .originalUrl(news.getOriginalUrl())
                                         .quizQuestion(item.getData().getQuiz().getQuestion())
                                         .recommendedQuestions(item.getData().getQuestions())
