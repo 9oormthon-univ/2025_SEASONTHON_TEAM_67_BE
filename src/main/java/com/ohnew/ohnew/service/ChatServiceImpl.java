@@ -133,7 +133,7 @@ public class ChatServiceImpl implements ChatService {
         try {
             // Python API 호출
             ChatDtoRes.ChatbotRes chatDtoRes = webClient.post()
-                    .uri("https://hsmyspace.site/py/v1/chat-article")
+                    .uri("http://localhost:8000/py/v1/chat-article")
                     .bodyValue(chatbotReq)
                     .retrieve()
                     .bodyToMono(ChatDtoRes.ChatbotRes.class)
