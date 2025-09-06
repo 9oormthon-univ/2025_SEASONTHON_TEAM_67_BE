@@ -21,7 +21,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.net.URL;
-import java.sql.SQLOutput;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -106,6 +105,7 @@ public class RssServiceImpl {
                         .title(title)
                         .body(body)
                         .build());
+
             }
         } catch (Exception e) {
             log.error("RSS 데이터 파싱 중 오류 발생: ", e);
@@ -114,8 +114,8 @@ public class RssServiceImpl {
     }
 
     /**
-     * 파이썬 API 호출
-     */
+     * 파이썬 API 요청
+      */
     private void callPythonApi(NewsByMultiRssRes multiRes) {
         try {
             // Python API 호출
@@ -155,6 +155,7 @@ public class RssServiceImpl {
             throw new GeneralException(ErrorStatus.AI_PROCESSING_FAILED);
         }
     }
+
 
     /**
      * 기사 웹 크롤링

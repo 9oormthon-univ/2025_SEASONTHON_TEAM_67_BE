@@ -26,4 +26,12 @@ public class ChatConverter {
                         )).toList())
                 .build();
     }
+
+    public static ChatDtoRes.ChatTlakRes toTalk(ChatRoom room, String messages) {
+        return ChatDtoRes.ChatTlakRes.builder()
+                .chatRoomId(room.getId())
+                .newsId(room.getNews().getId())
+                .messages(messages)
+                .build();
+    }
 }
