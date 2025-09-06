@@ -53,4 +53,23 @@ public class ChatDtoRes {
     public static class ChattedNewsListRes {
         private List<ChattedNewsItem> items;
     }
+
+    @Data
+    @Builder
+    public static class ChatbotRes {
+        private String articleId;
+        private String userId;
+        private String userMessage;
+        private String answer;
+        private String model;
+        private Long latencyMs;
+    }
+
+    @Data
+    @Builder
+    public static class ChatTlakRes{
+        private Long chatRoomId;
+        private Long newsId;
+        private String messages;
+    }
 }
