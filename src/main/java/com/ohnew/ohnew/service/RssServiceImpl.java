@@ -120,7 +120,7 @@ public class RssServiceImpl {
         try {
             // Python API 호출
             NewsByPythonRes pythonRes = webClient.post()
-                    .uri("https://hsmyspace.site/py/v1/rewrite-batch")
+                    .uri("http://localhost:8000/py/v1/rewrite-batch")
                     .bodyValue(multiRes)
                     .retrieve()
                     .bodyToMono(NewsByPythonRes.class) // Python에서 articleId + summary 포함 반환
