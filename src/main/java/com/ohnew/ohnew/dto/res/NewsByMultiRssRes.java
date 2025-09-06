@@ -11,6 +11,6 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class NewsByRssMultiRes {
+public class NewsByMultiRssRes {
     private List<NewsByRssRes> items;
 }

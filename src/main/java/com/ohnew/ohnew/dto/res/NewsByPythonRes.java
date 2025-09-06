@@ -34,7 +34,7 @@ public class NewsByPythonRes {
     @AllArgsConstructor
     public static class NewsData {
         private String articleId;
-        private String newsTitle;
+        private String newTitle;
         private String summary;
         private List<String> questions;
         private Quiz quiz;

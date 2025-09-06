@@ -5,6 +5,7 @@ import com.ohnew.ohnew.common.security.JwtTokenProvider;
 import com.ohnew.ohnew.dto.res.NewsDtoRes;
 import com.ohnew.ohnew.service.NewsService;
 import io.swagger.v3.oas.annotations.Operation;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -46,6 +47,13 @@ public class NewsController {
     public ApiResponse<List<NewsDtoRes.NewsSummaryRes>> myScraps() {
         Long userId = jwtTokenProvider.getUserIdFromToken();
         return ApiResponse.onSuccess(newsService.getMyScrapList(userId));
+    }
+
+    @Operation(summary = "오늘의 뉴스 리스트 조회", description = "퀴즈 포함 뉴스 목록")
+    @GetMapping("/today")
+    public ApiResponse<List<NewsDtoRes.NewsDetailRes>> getTodayScraps() {
+        Long userId = jwtTokenProvider.getUserIdFromToken();
+        return ApiResponse.onSuccess(newsService.getTodayNews(userId));
     }
 
 }
