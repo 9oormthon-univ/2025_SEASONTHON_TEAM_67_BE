@@ -27,6 +27,8 @@ public class NewsConverter {
                 .tags(new ArrayList<>(n.getTags()))
                 .recommendedQuestions(n.getRecommendedQuestions())
                 .scrapped(scrapped)
+                .quiz(n.getQuizQuestion())
+                .answer(n.getQuizAnswer())
                 .build();
     }
 }
