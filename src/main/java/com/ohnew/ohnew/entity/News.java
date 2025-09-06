@@ -46,8 +46,8 @@ public class News extends BaseEntity {
     @Column(name = "question")
     private List<String> recommendedQuestions;
 
-    @Column(name = "quiz")
-    private String quiz;
+    @Column(name = "quiz_question")
+    private String quizQuestion;
 
     @Column(name = "quiz_answer")
     private String quizAnswer;

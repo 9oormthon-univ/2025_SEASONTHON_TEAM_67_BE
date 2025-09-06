@@ -130,14 +130,20 @@ public class RssServiceImpl implements RssService {
 
             if (pythonRes != null && pythonRes.getResults() != null) {
                 pythonRes.getResults().forEach(item -> {
+                    // 테스트 출력
+                    System.out.println("title: " + item.getData().getNewTitle());
+                    System.out.println("Summary: " + item.getData().getSummary().indexOf(10));
+
                     // DB에서 해당 articleId 찾기
                     newsRepository.findById(Long.parseLong(item.getArticleId()))
                             .ifPresent(news -> {
                                 News updatedNews = News.builder()
                                         .id(news.getId())
                                         .title(item.getData().getNewTitle())
-                                        .originalPublishedAt(news.getOriginalPublishedAt())
                                         .summary(item.getData().getSummary()) // 여기서 새로운 summary 적용
+                                        .quizQuestion(item.getData().getQuiz().getQuestion())
+                                        .quizAnswer(item.getData().getQuiz().getAnswer())
+                                        .originalPublishedAt(news.getOriginalPublishedAt())
                                         .build();
                                 newsRepository.save(updatedNews);
                             });
