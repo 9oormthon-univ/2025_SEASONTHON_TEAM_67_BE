@@ -24,7 +24,7 @@ import java.util.Optional;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Transactional
 public class ChatServiceImpl implements ChatService {
 
     private final WebClient webClient;
@@ -32,6 +32,7 @@ public class ChatServiceImpl implements ChatService {
     private final ChatMessageRepository chatMessageRepository;
     private final NewsRepository newsRepository;
     private final UserRepository userRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private News getNewsOrThrow(Long newsId) {
         return newsRepository.findById(newsId)
@@ -43,8 +44,28 @@ public class ChatServiceImpl implements ChatService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
     }
 
-    @Override
-    @Transactional
+    private ChatDtoRes.ChatbotRes callPythonApi(ChatbotReq chatbotReq) {
+        try {
+            // 요청 DTO 로깅 (JSON 직렬화)
+            String reqJson = objectMapper.writeValueAsString(chatbotReq);
+            log.info("Python API 요청: {}", reqJson);
+
+            // Python API 호출
+            ChatDtoRes.ChatbotRes chatDtoRes = webClient.post()
+                    .uri("http://localhost:8000/v1/chat-article")
+                    .bodyValue(chatbotReq)
+                    .retrieve()
+                    .bodyToMono(ChatDtoRes.ChatbotRes.class)
+                    .blockOptional()
+                    .orElseThrow(() -> new GeneralException(ErrorStatus.AI_PROCESSING_FAILED));
+
+            return chatDtoRes;
+        } catch (Exception e) {
+            log.error("Python API 호출 실패: {}", e.getMessage(), e);
+            throw new GeneralException(ErrorStatus.AI_PROCESSING_FAILED);
+        }
+    }
+
     public ChatDtoRes.EnterChatRoomRes enterChatRoom(Long userId, Long newsId) {
         User user = getUserOrThrow(userId);
         News news = getNewsOrThrow(newsId);
@@ -57,7 +78,7 @@ public class ChatServiceImpl implements ChatService {
         return ChatConverter.toEnter(room);
     }
 
-    @Override
+    @Transactional(readOnly = true)
     public ChatDtoRes.ChatMessagesRes getMyChatMessagesForNews(Long userId, Long newsId) {
         User user = getUserOrThrow(userId);
         News news = getNewsOrThrow(newsId);
@@ -69,7 +90,7 @@ public class ChatServiceImpl implements ChatService {
         return ChatConverter.toMessages(room, messages);
     }
 
-    @Override
+    @Transactional(readOnly = true)
     public ChatDtoRes.ChattedNewsListRes getMyChattedNewsList(Long userId) {
         var rooms = chatRoomRepository.findByUserId(userId);
         var items = rooms.stream().map(r -> {
@@ -85,39 +106,50 @@ public class ChatServiceImpl implements ChatService {
         return ChatDtoRes.ChattedNewsListRes.builder().items(items).build();
     }
 
-    @Transactional
-    @Override
     public ChatDtoRes.ChatTlakRes getMyChatSpecificNews(Long userId, Long newsId, String userMessage, Long chatRoomId) {
         User user = getUserOrThrow(userId);
         News news = getNewsOrThrow(newsId);
-
         String summary = Optional.ofNullable(news.getSummary()).orElse("");
 
-        // DB에서 이전 대화 내역 가져오기
-        List<ChatMessage> messages = chatMessageRepository.findByIdOrderByCreatedAtAsc(chatRoomId);
-        // ChatHistory로 변환
-        List<ChatbotReq.ChatHistory> history =   messages.stream()
+        // 채팅방 로드
+        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.CHAT_ROOM_NOT_FOUND));
+
+        // 이전 대화 조회 (채팅방 기준, 생성시간 오름차순)
+        List<ChatMessage> messages =
+                chatMessageRepository.findAllByChatRoomIdOrderByCreatedAtAsc(chatRoomId);
+
+        // 이번 사용자 발화 저장 (history에는 포함되지 않도록 '조회 후' 저장)
+        chatMessageRepository.save(
+                ChatMessage.builder()
+                        .chatRoom(chatRoom)
+                        .sender(ChatSender.USER)
+                        .content(userMessage)
+                        .build()
+        );
+
+        // history 변환 (이전 대화만)
+        List<ChatbotReq.ChatHistory> history = messages.stream()
                 .map(m -> ChatbotReq.ChatHistory.builder()
-                        .role(m.getSender().toString())
+                        .role(m.getSender() == ChatSender.BOT ? "assistant" : "user")
                         .content(m.getContent())
                         .build())
                 .toList();
 
+        // 파이썬 요청 바디
         ChatbotReq chatbotReq = ChatbotReq.builder()
                 .articleId(newsId.toString())
                 .userId(userId.toString())
                 .summary(summary)
-                .history(history)
-                .userMessage(userMessage)
+                .history(history)        // 이전 대화
+                .userMessage(userMessage) // 이번 사용자 발화
                 .build();
 
-        // 여기서 Python API 호출
+        // 파이썬 호출
         ChatDtoRes.ChatbotRes response = callPythonApi(chatbotReq);
 
-        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.CHAT_ROOM_NOT_FOUND));
-
-        ChatMessage saveMessage = chatMessageRepository.save(
+        // 봇 응답 저장
+        chatMessageRepository.save(
                 ChatMessage.builder()
                         .chatRoom(chatRoom)
                         .sender(ChatSender.BOT)
@@ -125,25 +157,9 @@ public class ChatServiceImpl implements ChatService {
                         .build()
         );
 
-        // 반환값은 필요에 맞게 작성 (예: DB에 메시지 저장 후 리턴)
+        // 반환
         return ChatConverter.toTalk(chatRoom, response.getAnswer());
     }
 
-    private ChatDtoRes.ChatbotRes callPythonApi(ChatbotReq chatbotReq) {
-        try {
-            // Python API 호출
-            ChatDtoRes.ChatbotRes chatDtoRes = webClient.post()
-                    .uri("http://localhost:8000/py/v1/chat-article")
-                    .bodyValue(chatbotReq)
-                    .retrieve()
-                    .bodyToMono(ChatDtoRes.ChatbotRes.class)
-                    .blockOptional()
-                    .orElseThrow(() -> new GeneralException(ErrorStatus.AI_PROCESSING_FAILED));
 
-            return chatDtoRes;
-        } catch (Exception e) {
-            log.error("Python API 호출 실패: {}", e.getMessage(), e);
-            throw new GeneralException(ErrorStatus.AI_PROCESSING_FAILED);
-        }
-    }
 }
