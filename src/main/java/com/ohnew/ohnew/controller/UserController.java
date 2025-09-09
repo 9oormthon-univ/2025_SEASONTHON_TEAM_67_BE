@@ -90,9 +90,12 @@ public class UserController {
 
     @Operation(summary = "토큰 재발급(앱)", description = "리프레시 토큰을 사용하여 새로운 액세스/리프레시 토큰 발급")
     @PostMapping("/refresh")
-    public ApiResponse<UserDtoRes.UserLoginRes> refresh(@RequestBody @Valid TokenDtoReq.RefreshTokenReq req) {
-        // 앱은 바디로 RT를 보낸다(헤더/쿠키 의존 제거)
-        var res = userService.rotateTokensForApp(req.getRefreshToken());
+    public ApiResponse<UserDtoRes.UserLoginRes> refresh() {
+        // 앱은 헤더로 리플레시 토큰 확인, 액세스 토큰은 확인 x
+        String refreshToken = jwtTokenProvider.resolveRefreshToken();
+
+        var res = userService.rotateTokensForApp(refreshToken);
+
         return ApiResponse.onSuccess(res);
     }
 
