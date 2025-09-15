@@ -45,7 +45,11 @@ public enum ErrorStatus implements BaseErrorCode {
     AI_PROCESSING_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "NEWS5002", "AI 처리 중 오류가 발생했습니다."),
 
     //챗봇 관련 에러
-    CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT404", "채팅방이 존재하지 않습니다.");
+    CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT404", "채팅방이 존재하지 않습니다."),
+
+    //
+    PREFERENCE_SAVE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "PREFER500", "선호도 저장에 실패했습니다.");
+
 
     private final HttpStatus httpStatus;
     private final String code;

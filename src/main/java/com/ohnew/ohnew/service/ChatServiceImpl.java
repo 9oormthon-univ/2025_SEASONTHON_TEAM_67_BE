@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ohnew.ohnew.apiPayload.code.exception.GeneralException;
 import com.ohnew.ohnew.apiPayload.code.status.ErrorStatus;
 import com.ohnew.ohnew.converter.ChatConverter;
-import com.ohnew.ohnew.dto.req.ChatbotReq;
+import com.ohnew.ohnew.dto.req.ChatbotDtoReq;
 import com.ohnew.ohnew.dto.res.ChatDtoRes;
 import com.ohnew.ohnew.entity.*;
 import com.ohnew.ohnew.entity.enums.ChatSender;
@@ -15,8 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import java.time.ZoneId;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -44,16 +42,16 @@ public class ChatServiceImpl implements ChatService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
     }
 
-    private ChatDtoRes.ChatbotRes callPythonApi(ChatbotReq chatbotReq) {
+    private ChatDtoRes.ChatbotRes callPythonApi(ChatbotDtoReq chatbotDtoReq) {
         try {
             // 요청 DTO 로깅 (JSON 직렬화)
-            String reqJson = objectMapper.writeValueAsString(chatbotReq);
+            String reqJson = objectMapper.writeValueAsString(chatbotDtoReq);
             log.info("Python API 요청: {}", reqJson);
 
             // Python API 호출
             ChatDtoRes.ChatbotRes chatDtoRes = webClient.post()
                     .uri("http://localhost:8000/v1/chat-article")
-                    .bodyValue(chatbotReq)
+                    .bodyValue(chatbotDtoReq)
                     .retrieve()
                     .bodyToMono(ChatDtoRes.ChatbotRes.class)
                     .blockOptional()
@@ -129,15 +127,15 @@ public class ChatServiceImpl implements ChatService {
         );
 
         // history 변환 (이전 대화만)
-        List<ChatbotReq.ChatHistory> history = messages.stream()
-                .map(m -> ChatbotReq.ChatHistory.builder()
+        List<ChatbotDtoReq.ChatHistory> history = messages.stream()
+                .map(m -> ChatbotDtoReq.ChatHistory.builder()
                         .role(m.getSender() == ChatSender.BOT ? "assistant" : "user")
                         .content(m.getContent())
                         .build())
                 .toList();
 
         // 파이썬 요청 바디
-        ChatbotReq chatbotReq = ChatbotReq.builder()
+        ChatbotDtoReq chatbotDtoReq = ChatbotDtoReq.builder()
                 .articleId(newsId.toString())
                 .userId(userId.toString())
                 .summary(summary)
@@ -146,7 +144,7 @@ public class ChatServiceImpl implements ChatService {
                 .build();
 
         // 파이썬 호출
-        ChatDtoRes.ChatbotRes response = callPythonApi(chatbotReq);
+        ChatDtoRes.ChatbotRes response = callPythonApi(chatbotDtoReq);
 
         // 봇 응답 저장
         chatMessageRepository.save(

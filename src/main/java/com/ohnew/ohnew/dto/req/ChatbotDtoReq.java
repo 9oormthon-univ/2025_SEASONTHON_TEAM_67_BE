@@ -12,7 +12,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ChatbotReq {
+public class ChatbotDtoReq {
 
     private String articleId;
     private String userId;

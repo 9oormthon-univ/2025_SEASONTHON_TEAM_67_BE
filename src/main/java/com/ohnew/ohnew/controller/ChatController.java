@@ -2,7 +2,7 @@ package com.ohnew.ohnew.controller;
 
 import com.ohnew.ohnew.apiPayload.ApiResponse;
 import com.ohnew.ohnew.common.security.JwtTokenProvider;
-import com.ohnew.ohnew.dto.req.ChatbotReq;
+import com.ohnew.ohnew.dto.req.ChatbotDtoReq;
 import com.ohnew.ohnew.dto.res.ChatDtoRes;
 import com.ohnew.ohnew.service.ChatService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -40,7 +40,7 @@ public class ChatController {
 
     @Operation(summary = "특정 기사로 챗봇이랑 대화하기", description = "특정 기사를 포함한 대화")
     @PostMapping("/news/{newsId}/talk")
-    public ApiResponse<ChatDtoRes.ChatTlakRes> specificNewsChat(@PathVariable Long newsId, @RequestBody ChatbotReq.ChatMessageRes chatbotReq) {
+    public ApiResponse<ChatDtoRes.ChatTlakRes> specificNewsChat(@PathVariable Long newsId, @RequestBody ChatbotDtoReq.ChatMessageRes chatbotReq) {
         Long userId = jwtTokenProvider.getUserIdFromToken();
         return ApiResponse.onSuccess(chatService.getMyChatSpecificNews(userId, newsId, chatbotReq.getMessage(), chatbotReq.getChatRoomId()));
     }
