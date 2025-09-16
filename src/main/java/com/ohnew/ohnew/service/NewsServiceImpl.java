@@ -11,9 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -52,6 +51,19 @@ public class NewsServiceImpl implements NewsService {
             if (target.contains(t)) return true;
         }
         return false;
+    }
+
+    private static boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
+    }
+
+    // 화면에 노출 가능한지(요약/퀴즈 필수) 판별
+    private static boolean isDisplayable(News n, NewsSummaryVariant v) {
+        // 요약 필수
+        if (v == null || isBlank(v.getSummary())) return false;
+        // 퀴즈(문항/정답) 필수
+        if (isBlank(n.getQuizQuestion()) || isBlank(n.getQuizAnswer())) return false;
+        return true;
     }
 
     @Override
@@ -109,38 +121,40 @@ public class NewsServiceImpl implements NewsService {
     public List<NewsDtoRes.NewsDetailRes> getTodayNews(Long userId) {
         getUserOrThrow(userId);
 
-        // 사용자 선호 가져오기 (스타일/선호태그/차단태그)
-        var pref = userPreferenceRepository.findByUserId(userId).orElse(null);
-        var style = pref != null ? pref.getPreferredStyle() : DEFAULT_STYLE;
-        var liked = pref != null ? pref.getLikedTags() : java.util.Collections.<String>emptySet();
-        var blocked = pref != null ? pref.getBlockedTags() : java.util.Collections.<String>emptySet();
+        // 선호 불러오기
+        var pref    = userPreferenceRepository.findByUserId(userId).orElse(null);
+        var style   = (pref != null) ? pref.getPreferredStyle() : DEFAULT_STYLE;
+        var liked   = (pref != null) ? pref.getLikedTags()       : Collections.<String>emptySet();
+        var blocked = (pref != null) ? pref.getBlockedTags()     : Collections.<String>emptySet();
 
-        // 차단 태그 포함 뉴스 배제
-        var filtered = newsRepository.findAllByOrderByCreatedAtDesc().stream()
-                .filter(n -> !hasAny(n.getTags(), blocked)) // 차단 태그 필터
-                .toList();
+        // 차단 태그 제외
+        var base = newsRepository.findAllByOrderByCreatedAtDesc().stream()
+                .filter(n -> !hasAny(n.getTags(), blocked))
+                .collect(Collectors.toList());
 
-        // 선호 태그 포함 뉴스 우선 정렬
-        var sorted = filtered.stream()
-                .sorted(
-                        Comparator
-                                .comparing((News n) -> hasAny(n.getTags(), liked))
-                                .reversed() // 선호 태그 포함 = true 먼저
-                                .thenComparing(News::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()))
-                )
-                .limit(20) // 20개 제한
-                .toList();
+        // 선호 태그 우선 + 최신순 보조키
+        base.sort(Comparator
+                .comparing((News n) -> hasAny(n.getTags(), liked)).reversed()
+                .thenComparing(News::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()))
+        );
 
-        // 각 뉴스에 대해 선호 스타일 (없으면 NEUTRAL) 조회 후 변환
-        return sorted.stream()
-                .map(news -> {
-                    boolean scrapped = scrapRepository.existsByUserIdAndNewsId(userId, news.getId());
-                    var variant = variantRepository.findByNewsIdAndNewsStyle(news.getId(), style)
-                            .orElseGet(() -> variantRepository.findByNewsIdAndNewsStyle(news.getId(), DEFAULT_STYLE)
-                                    .orElseThrow(() -> new GeneralException(
-                                            ErrorStatus.VARIANT_NOT_FOUND)));
-                    return NewsConverter.toDetail(news, variant, scrapped);
-                })
-                .toList();
+        // 순회하면서 displayable 한 것만 담고, 20개 차면 stop
+        List<NewsDtoRes.NewsDetailRes> out = new ArrayList<>(20);
+        for (News n : base) {
+            // 선호 스타일 -> NEUTRAL 폴백 (없으면 skip)
+            var variantOpt = variantRepository.findByNewsIdAndNewsStyle(n.getId(), style)
+                    .or(() -> variantRepository.findByNewsIdAndNewsStyle(n.getId(), DEFAULT_STYLE));
+            if (variantOpt.isEmpty()) continue; // 예외 대신 skip
+            var v = variantOpt.get();
+
+            if (!isDisplayable(n, v)) continue; // 요약/퀴즈 null이면 skip
+
+            boolean scrapped = scrapRepository.existsByUserIdAndNewsId(userId, n.getId());
+            out.add(NewsConverter.toDetail(n, v, scrapped));
+
+            if (out.size() >= 20) break; // 필터 후 제한
+        }
+
+        return out;
     }
 }
