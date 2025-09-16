@@ -8,6 +8,7 @@ import com.ohnew.ohnew.dto.req.ChatbotReq;
 import com.ohnew.ohnew.dto.res.ChatDtoRes;
 import com.ohnew.ohnew.entity.*;
 import com.ohnew.ohnew.entity.enums.ChatSender;
+import com.ohnew.ohnew.entity.enums.NewsStyle;
 import com.ohnew.ohnew.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,9 @@ public class ChatServiceImpl implements ChatService {
     private final ChatMessageRepository chatMessageRepository;
     private final NewsRepository newsRepository;
     private final UserRepository userRepository;
+    private final NewsSummaryVariantRepository variantRepository;
+    private final UserPreferenceRepository userPreferenceRepository;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private News getNewsOrThrow(Long newsId) {
@@ -43,6 +47,13 @@ public class ChatServiceImpl implements ChatService {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
     }
+
+    private NewsStyle resolveUserStyle(Long userId) {
+        return userPreferenceRepository.findByUserId(userId)
+                .map(UserPreference::getPreferredStyle)
+                .orElse(NewsStyle.NEUTRAL);
+    }
+
 
     private ChatDtoRes.ChatbotRes callPythonApi(ChatbotReq chatbotReq) {
         try {
@@ -93,33 +104,54 @@ public class ChatServiceImpl implements ChatService {
     @Transactional(readOnly = true)
     public ChatDtoRes.ChattedNewsListRes getMyChattedNewsList(Long userId) {
         var rooms = chatRoomRepository.findByUserId(userId);
+
+        var style = resolveUserStyle(userId);
         var items = rooms.stream().map(r -> {
-            var last = chatMessageRepository.findTop1ByChatRoomOrderByCreatedAtDesc(r);
-            return new ChatDtoRes.ChattedNewsItem(
-                    r.getNews().getId(),
-                    r.getNews().getTitle(),
-                    last != null ? last.getCreatedAt() : r.getCreatedAt()
-            );
-        }).sorted(Comparator.comparing(ChatDtoRes.ChattedNewsItem::getLastMessageAt).reversed())
-        .toList();
+                    var last = chatMessageRepository.findTop1ByChatRoomOrderByCreatedAtDesc(r);
+
+                    // 제목은 Variant의 newTitle 사용
+                    var news = r.getNews();
+                    var variant = variantRepository.findByNewsIdAndNewsStyle(news.getId(), style)
+                            .orElseGet(() -> variantRepository.findByNewsIdAndNewsStyle(news.getId(),
+                                            com.ohnew.ohnew.entity.enums.NewsStyle.NEUTRAL)
+                                    .orElse(null));
+
+                    String title = (variant != null && variant.getNewTitle()!=null)
+                            ? variant.getNewTitle() : "(제목 준비중)";
+
+                    return new ChatDtoRes.ChattedNewsItem(
+                            news.getId(),
+                            title,                                   // Variant 기반 제목
+                            last != null ? last.getCreatedAt() : r.getCreatedAt()
+                    );
+                }).sorted(Comparator.comparing(ChatDtoRes.ChattedNewsItem::getLastMessageAt).reversed())
+                .toList();
 
         return ChatDtoRes.ChattedNewsListRes.builder().items(items).build();
     }
 
-    public ChatDtoRes.ChatTlakRes getMyChatSpecificNews(Long userId, Long newsId, String userMessage, Long chatRoomId) {
+    public ChatDtoRes.ChatTlakRes getMyChatSpecificNews(Long userId, Long newsId, String userMessage) {
         User user = getUserOrThrow(userId);
         News news = getNewsOrThrow(newsId);
-        String summary = Optional.ofNullable(news.getSummary()).orElse("");
+
+        var style = resolveUserStyle(userId);
+        var variant = variantRepository.findByNewsIdAndNewsStyle(newsId, style)
+                .orElseGet(() -> variantRepository.findByNewsIdAndNewsStyle(newsId,
+                                com.ohnew.ohnew.entity.enums.NewsStyle.NEUTRAL)
+                        .orElseThrow(() -> new GeneralException(ErrorStatus.VARIANT_NOT_FOUND )));
+
+        String summary = variant.getSummary();
 
         // 채팅방 로드
-        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.CHAT_ROOM_NOT_FOUND));
+        ChatRoom chatRoom = chatRoomRepository.findByUserAndNews(user, news)
+                .orElseGet(() -> chatRoomRepository.save(
+                        ChatRoom.builder().user(user).news(news).build()
+                ));
 
-        // 이전 대화 조회 (채팅방 기준, 생성시간 오름차순)
-        List<ChatMessage> messages =
-                chatMessageRepository.findAllByChatRoomIdOrderByCreatedAtAsc(chatRoomId);
+        // 이전 대화 조회
+        List<ChatMessage> messages = chatMessageRepository.findByChatRoomOrderByCreatedAtAsc(chatRoom);
 
-        // 이번 사용자 발화 저장 (history에는 포함되지 않도록 '조회 후' 저장)
+        // 이번 사용자 발화 저장
         chatMessageRepository.save(
                 ChatMessage.builder()
                         .chatRoom(chatRoom)
@@ -128,7 +160,7 @@ public class ChatServiceImpl implements ChatService {
                         .build()
         );
 
-        // history 변환 (이전 대화만)
+        // history 변환
         List<ChatbotReq.ChatHistory> history = messages.stream()
                 .map(m -> ChatbotReq.ChatHistory.builder()
                         .role(m.getSender() == ChatSender.BOT ? "assistant" : "user")
@@ -138,15 +170,14 @@ public class ChatServiceImpl implements ChatService {
 
         // 파이썬 요청 바디
         ChatbotReq chatbotReq = ChatbotReq.builder()
-                .articleId(newsId.toString())
+                .articleId(newsId.toString())  // 부모 ID
                 .userId(userId.toString())
-                .summary(summary)
-                .history(history)        // 이전 대화
-                .userMessage(userMessage) // 이번 사용자 발화
+                .summary(summary)              // Variant 요약
+                .history(history)
+                .userMessage(userMessage)
                 .build();
 
-        // 파이썬 호출
-        ChatDtoRes.ChatbotRes response = callPythonApi(chatbotReq);
+        var response = callPythonApi(chatbotReq);
 
         // 봇 응답 저장
         chatMessageRepository.save(
@@ -157,9 +188,6 @@ public class ChatServiceImpl implements ChatService {
                         .build()
         );
 
-        // 반환
         return ChatConverter.toTalk(chatRoom, response.getAnswer());
     }
-
-
 }
