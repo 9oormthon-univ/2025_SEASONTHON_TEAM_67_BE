@@ -40,8 +40,8 @@ public class ChatController {
 
     @Operation(summary = "특정 기사로 챗봇이랑 대화하기", description = "특정 기사를 포함한 대화")
     @PostMapping("/news/{newsId}/talk")
-    public ApiResponse<ChatDtoRes.ChatTlakRes> specificNewsChat(@PathVariable Long newsId, @RequestBody ChatbotReq.ChatMessageRes chatbotReq) {
+    public ApiResponse<ChatDtoRes.ChatTlakRes> specificNewsChat(@PathVariable Long newsId, @RequestBody ChatbotReq.ChatMessageReq chatbotReq) {
         Long userId = jwtTokenProvider.getUserIdFromToken();
-        return ApiResponse.onSuccess(chatService.getMyChatSpecificNews(userId, newsId, chatbotReq.getMessage(), chatbotReq.getChatRoomId()));
+        return ApiResponse.onSuccess(chatService.getMyChatSpecificNews(userId, newsId, chatbotReq.getMessage()));
     }
 }

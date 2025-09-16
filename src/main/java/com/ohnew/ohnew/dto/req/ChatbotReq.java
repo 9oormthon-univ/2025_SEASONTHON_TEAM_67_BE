@@ -34,8 +34,7 @@ public class ChatbotReq {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class ChatMessageRes{
+    public static class ChatMessageReq{
         private String message;
-        private Long chatRoomId;
     }
 }
