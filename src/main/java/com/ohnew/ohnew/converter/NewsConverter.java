@@ -30,6 +30,9 @@ public class NewsConverter {
                 .quiz(n.getQuizQuestion())
                 .answer(n.getQuizAnswer())
                 .scrapped(scrapped)
+                .newsStyle(v.getNewsStyle().name())
+                .epiStimulationReduced(v.getEpiStimulationReduced())
+                .epiReason(v.getEpiReason())
                 .build();
     }
 }

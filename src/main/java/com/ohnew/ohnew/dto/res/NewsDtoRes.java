@@ -35,6 +35,9 @@ public class NewsDtoRes {
         private String quiz;
         private String answer;
         private Boolean scrapped; // 유저 기준
+        private String newsStyle;
+        private String epiStimulationReduced; // 예: "자극도를 34% 줄였어요"
+        private String epiReason; // 예: "과장 어휘/감정 표현 축소"
     }
 
 //    @Getter
