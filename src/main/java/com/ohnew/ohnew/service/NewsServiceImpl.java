@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
@@ -121,12 +122,12 @@ public class NewsServiceImpl implements NewsService {
 
         // 선호 태그 포함 뉴스 우선 정렬
         var sorted = filtered.stream()
-                .sorted((a,b) -> {
-                    boolean aLiked = hasAny(a.getTags(), liked);
-                    boolean bLiked = hasAny(b.getTags(), liked);
-                    if (aLiked == bLiked) return 0;
-                    return aLiked ? -1 : 1; // 선호 포함 뉴스 먼저
-                })
+                .sorted(
+                        Comparator
+                                .comparing((News n) -> hasAny(n.getTags(), liked))
+                                .reversed() // 선호 태그 포함 = true 먼저
+                                .thenComparing(News::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()))
+                )
                 .limit(20) // 20개 제한
                 .toList();
 
