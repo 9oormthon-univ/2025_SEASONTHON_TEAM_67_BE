@@ -44,6 +44,8 @@ public enum ErrorStatus implements BaseErrorCode {
     RSS_FETCH_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "NEWS5001", "RSS 데이터를 가져오는데 실패했습니다."),
     AI_PROCESSING_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "NEWS5002", "AI 처리 중 오류가 발생했습니다."),
 
+    VARIANT_NOT_FOUND(HttpStatus.NOT_FOUND, "VARIANT4040", "요약 변형을 찾을 수 없습니다."),
+
     //챗봇 관련 에러
     CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT404", "채팅방이 존재하지 않습니다.");
 

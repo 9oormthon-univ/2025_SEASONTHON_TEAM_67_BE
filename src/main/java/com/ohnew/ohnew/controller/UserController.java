@@ -5,10 +5,13 @@ import com.ohnew.ohnew.apiPayload.code.status.SuccessStatus;
 import com.ohnew.ohnew.common.security.JwtTokenProvider;
 import com.ohnew.ohnew.dto.req.TokenDtoReq;
 import com.ohnew.ohnew.dto.req.UserDtoReq;
+import com.ohnew.ohnew.dto.req.UserPreferenceDtoReq;
 import com.ohnew.ohnew.dto.res.KakaoUserInfoResponseDto;
 import com.ohnew.ohnew.dto.res.UserDtoRes;
+import com.ohnew.ohnew.dto.res.UserPreferenceDtoRes;
 import com.ohnew.ohnew.entity.User;
 import com.ohnew.ohnew.service.KakaoService;
+import com.ohnew.ohnew.service.UserPreferenceService;
 import com.ohnew.ohnew.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,6 +27,7 @@ public class UserController {
     private final UserService userService;
     private final JwtTokenProvider jwtTokenProvider;
     private final KakaoService kakaoService;
+    private final UserPreferenceService userPreferenceService;
 
     @Operation(summary = "카카오로그인(앱)", description = "앱에서 '카카오 액세스 토큰'을 전달")
     @PostMapping("/kakao-login")
@@ -33,11 +37,6 @@ public class UserController {
         return ApiResponse.onSuccess(userService.kakaoLogin(httpRequest, httpResponse, user));
     }
 
-//    @Operation(summary = "이메일 로그인 API(테스트용)", description = "이메일로 JWT토큰 발급")
-//    @PostMapping("/login")
-//    public ApiResponse<UserDtoRes.UserLoginRes> login(@RequestBody @Valid UserDtoReq.LoginReq loginDto, HttpServletRequest request, HttpServletResponse response) {
-//        return ApiResponse.onSuccess(userService.login(request,response,loginDto));
-//    }
 
     @Operation(summary = "로그아웃(앱)", description = "액세스 토큰을 무효화하여 로그아웃")
     @PostMapping("/logout")
@@ -98,13 +97,18 @@ public class UserController {
 
         return ApiResponse.onSuccess(res);
     }
+    @Operation(summary = "내 뉴스 선호 조회", description = "선호 스타일/선호 태그/차단 태그")
+    @GetMapping("/preferences/news")
+    public ApiResponse<UserPreferenceDtoRes> getNewsPreference() {
+        Long userId = jwtTokenProvider.getUserIdFromToken();
+        return ApiResponse.onSuccess(userPreferenceService.getPreference(userId));
+    }
 
-    //    @Operation(summary = "회원 기본 정보 조회 API", description = "사용자의 기본 정보를 조회합니다.")
-//    @GetMapping("/basic-info")
-//    public ApiResponse<UserDtoRes.userProfileRes> getUserBasicInfo() {
-//        Long userId = jwtTokenProvider.getUserIdFromToken();
-//        UserDtoRes.userProfileRes userBasicInfo = userService.getUserBasicInfo(userId);
-//        return ApiResponse.onSuccess(userBasicInfo);
-//    }
+    @Operation(summary = "내 뉴스 선호 저장", description = "선호 스타일 및 태그를 저장(덮어쓰기)")
+    @PutMapping("/preferences/news")
+    public ApiResponse<UserPreferenceDtoRes> saveNewsPreference(@RequestBody UserPreferenceDtoReq req) {
+        Long userId = jwtTokenProvider.getUserIdFromToken();
+        return ApiResponse.onSuccess(userPreferenceService.savePreference(userId, req));
+    }
 
 }

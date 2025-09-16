@@ -44,7 +44,7 @@ public class SecurityConfig {
                                 "/swagger-resources/**"
                         ).permitAll()
 
-                        // AWS 헬스 체크
+                        // 헬스 체크
                         .requestMatchers("/health").permitAll()
 
                         //카카오/로컬/로그인

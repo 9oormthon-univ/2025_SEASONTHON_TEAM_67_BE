@@ -18,6 +18,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.net.URL;
@@ -35,27 +36,29 @@ public class RssServiceImpl {
     private static final String RSS_URL = "https://news.sbs.co.kr/news/TopicRssFeed.do?plink=RSSREADER";
     private final NewsRepository newsRepository;
     private final WebClient webClient = WebClient.builder().build();
+    private final  NewsVariantService newsVariantService;
 
     @Scheduled(fixedRate = 6 * 60 * 60 * 1000) // 6시간 *
-    public NewsByMultiRssRes fetchAndDisplayRssData() {
+    @Transactional
+    public void fetchAndProcessRss() {
         try {
-            // 1. RSS 데이터 가져와서 DB에 저장
-            List<NewsByRssRes> newsByRssResList = fetchAndSaveRssData();
+            // RSS 읽고 신규 News 저장
+            List<NewsByRssRes> items = fetchAndSaveRssData();
 
-            // 2. DTO 생성 후 Python API 호출
+            if (items.isEmpty()) {
+                log.info("신규 RSS 항목 없음");
+                return;
+            }
+
+            // 파이썬 호출 + 변형/퀴즈/질문 저장
             NewsByMultiRssRes multiRes = NewsByMultiRssRes.builder()
-                    .items(newsByRssResList)
+                    .items(items)
                     .build();
 
             callPythonApi(multiRes);
 
-            return multiRes;
-
         } catch (Exception e) {
-            log.error("RSS 데이터를 가져오는 중 오류 발생: ", e);
-            return NewsByMultiRssRes.builder()
-                    .items(new ArrayList<>())
-                    .build();
+            log.error("RSS 처리 중 오류", e);
         }
     }
 
@@ -118,36 +121,51 @@ public class RssServiceImpl {
       */
     private void callPythonApi(NewsByMultiRssRes multiRes) {
         try {
-            // Python API 호출
             NewsByPythonRes pythonRes = webClient.post()
-                    .uri("http://localhost:8000/v1/rewrite-batch")
+                    .uri("http://localhost:8000/v1/rewrite-batch3") // ★ 교체
                     .bodyValue(multiRes)
                     .retrieve()
-                    .bodyToMono(NewsByPythonRes.class) // Python에서 articleId + summary 포함 반환
+                    .bodyToMono(NewsByPythonRes.class)
                     .block();
 
             if (pythonRes != null && pythonRes.getResults() != null) {
                 pythonRes.getResults().forEach(item -> {
-                    // 테스트 출력
-                    System.out.println("title: " + item.getData().getNewTitle());
-                    System.out.println("Summary: " + item.getData().getSummary().indexOf(10));
+                    if (item.getOk() == null || !item.getOk()) {
+                        log.warn("Python 처리 실패 articleId={} error={}", item.getArticleId(), item.getError());
+                        return;
+                    }
+                    var data = item.getData();
+                    if (data == null) return;
 
-                    // DB에서 해당 articleId 찾기
-                    newsRepository.findById(Long.parseLong(item.getArticleId()))
-                            .ifPresent(news -> {
-                                News updatedNews = News.builder()
-                                        .id(news.getId())
-                                        .title(item.getData().getNewTitle())
-                                        .summary(item.getData().getSummary()) // 여기서 새로운 summary 적용
-                                        .tags(news.getTags())
-                                        .originalUrl(news.getOriginalUrl())
-                                        .quizQuestion(item.getData().getQuiz().getQuestion())
-                                        .recommendedQuestions(item.getData().getQuestions())
-                                        .quizAnswer(item.getData().getQuiz().getAnswer())
-                                        .originalPublishedAt(news.getOriginalPublishedAt())
-                                        .build();
-                                newsRepository.save(updatedNews);
-                            });
+                    Long newsId = Long.parseLong(item.getArticleId());
+
+                    if (data.getVariants() != null) {
+                        data.getVariants().forEach(v -> {
+                            try {
+                                var style = com.ohnew.ohnew.entity.enums.NewsStyle.valueOf(v.getNewsStyle().toUpperCase());
+                                newsVariantService.upsertVariant(
+                                        newsId,
+                                        style,
+                                        v.getNewTitle(),
+                                        v.getSummary(),
+                                        v.getEpi()!=null ? v.getEpi().getStimulationReduced() : null,
+                                        v.getEpi()!=null ? v.getEpi().getReason() : null
+                                );
+                            } catch (IllegalArgumentException e) {
+                                log.warn("알 수 없는 newsStyle: {}", v.getNewsStyle());
+                            }
+                        });
+                    }
+
+                    // 부모 News에 질문/퀴즈 저장
+                    newsRepository.findById(newsId).ifPresent(n -> {
+                        n.replaceQuestions(data.getQuestions()); // 정규화 + 최대 4개 보장
+                        if (data.getQuiz() != null) {
+                            n.setQuiz(data.getQuiz().getQuestion(), data.getQuiz().getAnswer());
+                        } else {
+                            n.clearQuiz(); // 퀴즈가 없으면 비우기
+                        }
+                    });
                 });
             }
         } catch (Exception e) {

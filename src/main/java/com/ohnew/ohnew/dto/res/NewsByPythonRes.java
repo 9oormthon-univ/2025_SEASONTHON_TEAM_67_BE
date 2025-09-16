@@ -1,5 +1,6 @@
 package com.ohnew.ohnew.dto.res;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -34,13 +35,20 @@ public class NewsByPythonRes {
     @AllArgsConstructor
     public static class NewsData {
         private String articleId;
+        private List<Variant> variants; // 3개
+        private List<String> questions; // 기사당 1세트
+        private Quiz quiz;              // 기사당 1세트
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true) // 다른 필드가 와도 무시
+    public static class Variant {
+        private String newsStyle;
         private String newTitle;
         private String summary;
-        private List<String> questions;
-        private Quiz quiz;
-        private AiToken tokensUsed;
-        private String model;
-        private Long latencyMs;
+        private Epi epi;
     }
 
     @Data
@@ -54,10 +62,9 @@ public class NewsByPythonRes {
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class AiToken {
-        private Long input;
-        private Long output;
+    public static class Epi {
+        private String stimulationReduced;
+        private String reason;
     }
-
 
 }
