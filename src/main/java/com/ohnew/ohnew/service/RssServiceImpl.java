@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.net.URL;
+import java.time.Duration;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -122,10 +123,11 @@ public class RssServiceImpl {
     private void callPythonApi(NewsByMultiRssRes multiRes) {
         try {
             NewsByPythonRes pythonRes = webClient.post()
-                    .uri("http://localhost:8000/v1/rewrite-batch3") // ★ 교체
+                    .uri("http://localhost:8000/v1/rewrite-batch3")
                     .bodyValue(multiRes)
                     .retrieve()
                     .bodyToMono(NewsByPythonRes.class)
+                    .timeout(Duration.ofMinutes(10))// 10분.
                     .block();
 
             if (pythonRes != null && pythonRes.getResults() != null) {
