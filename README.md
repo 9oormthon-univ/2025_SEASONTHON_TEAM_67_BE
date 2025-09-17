@@ -27,7 +27,8 @@
 ## 📌 배포 / 운영
 - Caddy (HTTPS)  
 - GitHub + GitHub Actions  
-- Gradle  
+- Gradle
+- Nssm (Caddy, Spring, FastAPI 백그라운드 서비스 등록- 서버 실행시 자동 실행)
 
 ## 📌 개발자 환경
 - Local Developer → GitHub → GitHub Actions(Runners) → 배포
