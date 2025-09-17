@@ -34,6 +34,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RssServiceImpl {
 
+    // RSS 주소는 보안과 상관이 없으므로 하드코딩.
     private static final String RSS_URL = "https://news.sbs.co.kr/news/TopicRssFeed.do?plink=RSSREADER";
     private final NewsRepository newsRepository;
     private final WebClient webClient = WebClient.builder().build();
@@ -47,7 +48,7 @@ public class RssServiceImpl {
             List<NewsByRssRes> items = fetchAndSaveRssData();
 
             if (items.isEmpty()) {
-                log.info("신규 RSS 항목 없음");
+                log.info("업데이트된 RSS 항목 없음");
                 return;
             }
 
@@ -59,13 +60,12 @@ public class RssServiceImpl {
             callPythonApi(multiRes);
 
         } catch (Exception e) {
-            log.error("RSS 처리 중 오류", e);
+            log.error("RSS 새로고침 실패: {}", e.getMessage());
+            throw new GeneralException(ErrorStatus.RSS_FETCH_FAILED);
         }
     }
 
-    /**
-     * RSS 데이터를 가져와서 DB에 저장하고, DTO 리스트 반환
-     */
+    //RSS 데이터를 가져와서 DB에 저장하고, DTO 리스트 반환
     private List<NewsByRssRes> fetchAndSaveRssData() {
         List<NewsByRssRes> newsByRssResList = new ArrayList<>();
         try {
@@ -82,13 +82,15 @@ public class RssServiceImpl {
                         : "";
                 Date pubDate = entry.getPublishedDate();
 
-                System.out.println("Title: " + title);
-                System.out.println("Link: " + link);
-                System.out.println("Tags: " + category);
+                log.info("----- DB에 저장된 데이터 ----");
+                log.info("제목: {}", title);
+                log.info("Link: {}", link);
+                log.info("Tags: {}", category);
+                log.info("--------------------------");
 
                 // 이미 DB에 있으면 skip
                 if (newsRepository.existsByOriginalUrl(link)) {
-                    log.info("이미 저장된 기사 {}", link);
+                    log.info("이미 저장된 기사 링크: {}", link);
                     continue;
                 }
 
@@ -112,14 +114,13 @@ public class RssServiceImpl {
 
             }
         } catch (Exception e) {
-            log.error("RSS 데이터 파싱 중 오류 발생: ", e);
+            log.error("DB 저장 실패: {}", e.getMessage());
+            throw new GeneralException(ErrorStatus._INTERNAL_SERVER_ERROR);
         }
         return newsByRssResList;
     }
 
-    /**
-     * 파이썬 API 요청
-      */
+    // 파이썬 요쳥
     private void callPythonApi(NewsByMultiRssRes multiRes) {
         try {
             NewsByPythonRes pythonRes = webClient.post()
@@ -133,8 +134,8 @@ public class RssServiceImpl {
             if (pythonRes != null && pythonRes.getResults() != null) {
                 pythonRes.getResults().forEach(item -> {
                     if (item.getOk() == null || !item.getOk()) {
-                        log.warn("Python 처리 실패 articleId={} error={}", item.getArticleId(), item.getError());
-                        return;
+                        log.error("Python 처리 실패 articleId={} error={}", item.getArticleId(), item.getError());
+                        throw new GeneralException(ErrorStatus.AI_PROCESSING_FAILED);
                     }
                     var data = item.getData();
                     if (data == null) return;
@@ -154,7 +155,8 @@ public class RssServiceImpl {
                                         v.getEpi()!=null ? v.getEpi().getReason() : null
                                 );
                             } catch (IllegalArgumentException e) {
-                                log.warn("알 수 없는 newsStyle: {}", v.getNewsStyle());
+                                log.error("알 수 없는 newsStyle: {}", e.getMessage());
+                                throw new GeneralException(ErrorStatus.AI_PROCESSING_FAILED);
                             }
                         });
                     }
@@ -171,15 +173,12 @@ public class RssServiceImpl {
                 });
             }
         } catch (Exception e) {
-            log.error("Python API 호출 실패: {}", e.getMessage(), e);
+            log.error("Python API 호출 실패: {}", e.getMessage());
             throw new GeneralException(ErrorStatus.AI_PROCESSING_FAILED);
         }
     }
 
-
-    /**
-     * 기사 웹 크롤링
-     */
+    // 기사 내용 크롤링
     private String extractTextAreaContent(String url) {
         try {
             Document doc = Jsoup.connect(url)
@@ -188,11 +187,14 @@ public class RssServiceImpl {
                     .get();
 
             Element textAreaElement = doc.selectFirst(".text_area");
-            return (textAreaElement != null) ? textAreaElement.text() : "본문 내용을 찾을 수 없습니다.";
-
+            if (textAreaElement == null) {
+                log.warn("뉴스 기사 데이터 크롤링 실패");
+                throw new GeneralException(ErrorStatus.NEWS_ARTICLE_NOT_FOUND);
+            }
+            return textAreaElement.text();
         } catch (Exception e) {
-            log.error("웹페이지 파싱 중 오류 발생: " + url, e);
-            return "본문 내용을 가져오는 중 오류가 발생했습니다: " + e.getMessage();
+            log.error("웹페이지 파싱 중 오류 발생 → url: {}", url);
+            throw new GeneralException(ErrorStatus.NEWS_SCRAPING_FAILED);
         }
     }
 }
