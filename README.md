@@ -1,4 +1,4 @@
-# 아키텍처 구조도
+# 아키텍처 구조도(셀프 호스팅)
 
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/d4cc1a25-e5a1-4d97-a713-becc94830032" />
 
