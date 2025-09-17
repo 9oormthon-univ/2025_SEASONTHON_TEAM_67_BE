@@ -56,6 +56,7 @@ public class ChatServiceImpl implements ChatService {
     }
 
     private ChatDtoRes.ChatbotRes callPythonApi(ChatbotReq chatbotReq) {
+        // 예외처리는 메소드 함수 내부에 있음.
         return pythonApi.callPythonApi(
                 "http://localhost:8000/v1/chat-article",
                 chatbotReq,

@@ -39,7 +39,6 @@ public class RssServiceImpl {
     private static final String RSS_URL = "https://news.sbs.co.kr/news/TopicRssFeed.do?plink=RSSREADER";
     private final NewsRepository newsRepository;
     private final PythonApi  pythonApi;
-    private final WebClient webClient = WebClient.builder().build();
     private final  NewsVariantService newsVariantService;
 
     @Scheduled(fixedRate = 6 * 60 * 60 * 1000) // 6시간 *
@@ -67,7 +66,7 @@ public class RssServiceImpl {
         }
     }
 
-    //RSS 데이터를 가져와서 DB에 저장하고, DTO 리스트 반환
+    // RSS 데이터를 가져와서 DB에 저장하고, DTO 리스트 반환
     private List<NewsByRssRes> fetchAndSaveRssData() {
         List<NewsByRssRes> newsByRssResList = new ArrayList<>();
         try {
@@ -124,7 +123,7 @@ public class RssServiceImpl {
 
     // 파이썬 요청
     private void callPythonApi(NewsByMultiRssRes multiRes) {
-        // Python API 호출 (10분 타임아웃 포함)
+        // 예외처리는 메소드 함수 내부에 있음.
         NewsByPythonRes pythonRes = pythonApi.callPythonApi(
                 "http://localhost:8000/v1/rewrite-batch3",
                 multiRes,
