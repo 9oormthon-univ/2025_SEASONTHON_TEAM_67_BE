@@ -30,4 +30,4 @@
 - Gradle  
 
 ## 📌 개발자 환경
-- Local Developer → GitHub → GitHub Actions → 배포
+- Local Developer → GitHub → GitHub Actions(Runners) → 배포
