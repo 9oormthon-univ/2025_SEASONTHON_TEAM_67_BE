@@ -2,6 +2,7 @@ package com.ohnew.ohnew.service;
 
 import com.ohnew.ohnew.apiPayload.code.exception.GeneralException;
 import com.ohnew.ohnew.apiPayload.code.status.ErrorStatus;
+import com.ohnew.ohnew.common.PythonApi;
 import com.ohnew.ohnew.dto.res.NewsByPythonRes;
 import com.ohnew.ohnew.dto.res.NewsByRssRes;
 import com.ohnew.ohnew.dto.res.NewsByMultiRssRes;
@@ -37,6 +38,7 @@ public class RssServiceImpl {
     // RSS 주소는 보안과 상관이 없으므로 하드코딩.
     private static final String RSS_URL = "https://news.sbs.co.kr/news/TopicRssFeed.do?plink=RSSREADER";
     private final NewsRepository newsRepository;
+    private final PythonApi  pythonApi;
     private final WebClient webClient = WebClient.builder().build();
     private final  NewsVariantService newsVariantService;
 
@@ -120,61 +122,55 @@ public class RssServiceImpl {
         return newsByRssResList;
     }
 
-    // 파이썬 요쳥
+    // 파이썬 요청
     private void callPythonApi(NewsByMultiRssRes multiRes) {
-        try {
-            NewsByPythonRes pythonRes = webClient.post()
-                    .uri("http://localhost:8000/v1/rewrite-batch3")
-                    .bodyValue(multiRes)
-                    .retrieve()
-                    .bodyToMono(NewsByPythonRes.class)
-                    .timeout(Duration.ofMinutes(10))// 10분.
-                    .block();
+        // Python API 호출 (10분 타임아웃 포함)
+        NewsByPythonRes pythonRes = pythonApi.callPythonApi(
+                "http://localhost:8000/v1/rewrite-batch3",
+                multiRes,
+                NewsByPythonRes.class
+        );
 
-            if (pythonRes != null && pythonRes.getResults() != null) {
-                pythonRes.getResults().forEach(item -> {
-                    if (item.getOk() == null || !item.getOk()) {
-                        log.error("Python 처리 실패 articleId={} error={}", item.getArticleId(), item.getError());
-                        throw new GeneralException(ErrorStatus.AI_PROCESSING_FAILED);
-                    }
-                    var data = item.getData();
-                    if (data == null) return;
+        if (pythonRes != null && pythonRes.getResults() != null) {
+            pythonRes.getResults().forEach(item -> {
+                if (item.getOk() == null || !item.getOk()) {
+                    log.error("Python 처리 실패 articleId={} error={}", item.getArticleId(), item.getError());
+                    throw new GeneralException(ErrorStatus.AI_PROCESSING_FAILED);
+                }
+                var data = item.getData();
+                if (data == null) return;
 
-                    Long newsId = Long.parseLong(item.getArticleId());
+                Long newsId = Long.parseLong(item.getArticleId());
 
-                    if (data.getVariants() != null) {
-                        data.getVariants().forEach(v -> {
-                            try {
-                                var style = com.ohnew.ohnew.entity.enums.NewsStyle.valueOf(v.getNewsStyle().toUpperCase());
-                                newsVariantService.upsertVariant(
-                                        newsId,
-                                        style,
-                                        v.getNewTitle(),
-                                        v.getSummary(),
-                                        v.getEpi()!=null ? v.getEpi().getStimulationReduced() : null,
-                                        v.getEpi()!=null ? v.getEpi().getReason() : null
-                                );
-                            } catch (IllegalArgumentException e) {
-                                log.error("알 수 없는 newsStyle: {}", e.getMessage());
-                                throw new GeneralException(ErrorStatus.AI_PROCESSING_FAILED);
-                            }
-                        });
-                    }
-
-                    // 부모 News에 질문/퀴즈 저장
-                    newsRepository.findById(newsId).ifPresent(n -> {
-                        n.replaceQuestions(data.getQuestions()); // 정규화 + 최대 4개 보장
-                        if (data.getQuiz() != null) {
-                            n.setQuiz(data.getQuiz().getQuestion(), data.getQuiz().getAnswer());
-                        } else {
-                            n.clearQuiz(); // 퀴즈가 없으면 비우기
+                if (data.getVariants() != null) {
+                    data.getVariants().forEach(v -> {
+                        try {
+                            var style = com.ohnew.ohnew.entity.enums.NewsStyle.valueOf(v.getNewsStyle().toUpperCase());
+                            newsVariantService.upsertVariant(
+                                    newsId,
+                                    style,
+                                    v.getNewTitle(),
+                                    v.getSummary(),
+                                    v.getEpi()!=null ? v.getEpi().getStimulationReduced() : null,
+                                    v.getEpi()!=null ? v.getEpi().getReason() : null
+                            );
+                        } catch (IllegalArgumentException e) {
+                            log.error("알 수 없는 newsStyle: {}", e.getMessage());
+                            throw new GeneralException(ErrorStatus.AI_PROCESSING_FAILED);
                         }
                     });
+                }
+
+                // 부모 News에 질문/퀴즈 저장
+                newsRepository.findById(newsId).ifPresent(n -> {
+                    n.replaceQuestions(data.getQuestions()); // 정규화 + 최대 4개 보장
+                    if (data.getQuiz() != null) {
+                        n.setQuiz(data.getQuiz().getQuestion(), data.getQuiz().getAnswer());
+                    } else {
+                        n.clearQuiz(); // 퀴즈가 없으면 비우기
+                    }
                 });
-            }
-        } catch (Exception e) {
-            log.error("Python API 호출 실패: {}", e.getMessage());
-            throw new GeneralException(ErrorStatus.AI_PROCESSING_FAILED);
+            });
         }
     }
 

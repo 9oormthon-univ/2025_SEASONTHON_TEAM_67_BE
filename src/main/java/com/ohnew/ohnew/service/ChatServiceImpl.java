@@ -3,6 +3,7 @@ package com.ohnew.ohnew.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ohnew.ohnew.apiPayload.code.exception.GeneralException;
 import com.ohnew.ohnew.apiPayload.code.status.ErrorStatus;
+import com.ohnew.ohnew.common.PythonApi;
 import com.ohnew.ohnew.converter.ChatConverter;
 import com.ohnew.ohnew.dto.req.ChatbotReq;
 import com.ohnew.ohnew.dto.res.ChatDtoRes;
@@ -28,7 +29,7 @@ import java.util.Optional;
 @Transactional
 public class ChatServiceImpl implements ChatService {
 
-    private final WebClient webClient;
+    private final PythonApi  pythonApi;
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final NewsRepository newsRepository;
@@ -54,27 +55,12 @@ public class ChatServiceImpl implements ChatService {
                 .orElse(NewsStyle.NEUTRAL);
     }
 
-
     private ChatDtoRes.ChatbotRes callPythonApi(ChatbotReq chatbotReq) {
-        try {
-            // 요청 DTO 로깅 (JSON 직렬화)
-            String reqJson = objectMapper.writeValueAsString(chatbotReq);
-            log.info("Python API 요청: {}", reqJson);
-
-            // Python API 호출
-            ChatDtoRes.ChatbotRes chatDtoRes = webClient.post()
-                    .uri("http://localhost:8000/v1/chat-article")
-                    .bodyValue(chatbotReq)
-                    .retrieve()
-                    .bodyToMono(ChatDtoRes.ChatbotRes.class)
-                    .blockOptional()
-                    .orElseThrow(() -> new GeneralException(ErrorStatus.AI_PROCESSING_FAILED));
-
-            return chatDtoRes;
-        } catch (Exception e) {
-            log.error("Python API 호출 실패: {}", e.getMessage(), e);
-            throw new GeneralException(ErrorStatus.AI_PROCESSING_FAILED);
-        }
+        return pythonApi.callPythonApi(
+                "http://localhost:8000/v1/chat-article",
+                chatbotReq,
+                ChatDtoRes.ChatbotRes.class
+        );
     }
 
     public ChatDtoRes.EnterChatRoomRes enterChatRoom(Long userId, Long newsId) {
