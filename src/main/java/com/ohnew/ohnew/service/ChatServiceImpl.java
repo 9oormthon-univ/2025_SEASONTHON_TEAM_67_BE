@@ -101,7 +101,7 @@ public class ChatServiceImpl implements ChatService {
                     var variant = variantRepository.findByNewsIdAndNewsStyle(news.getId(), style)
                             .orElseGet(() -> variantRepository.findByNewsIdAndNewsStyle(news.getId(),
                                             com.ohnew.ohnew.entity.enums.NewsStyle.NEUTRAL)
-                                    .orElse(null));
+                                    .orElseThrow(() -> new GeneralException(ErrorStatus.VARIANT_NOT_FOUND )));
 
                     String title = (variant != null && variant.getNewTitle()!=null)
                             ? variant.getNewTitle() : "(제목 준비중)";
