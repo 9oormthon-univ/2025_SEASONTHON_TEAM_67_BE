@@ -1,12 +1,11 @@
-현재 Readme 정리중입니다.
-
-# OHNEW BE Server
+# OHNEW BE
 구름톤 유니브 시즌톤 67팀 오뉴 백엔드 레포지토리
 <img width="1530" height="855" alt="image" src="https://github.com/user-attachments/assets/8eb7371e-c0cc-4358-855f-289eccb491e9" />
 
+# Introduction
+양질의 콘텐츠에 중독되다! 숏폼으로 중독되는 뉴스, 뉴스를 보는 새로운 방법
 
-# 아키텍처 구조도(셀프 호스팅)
-
+# Architectural Structural Chart (Self-Hosting)
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/d4cc1a25-e5a1-4d97-a713-becc94830032" />
 
 
@@ -21,7 +20,7 @@
 | **개발 환경**     | Local Developer → GitHub → GitHub Actions (Runners) → 배포 |
 
 
-# 프로젝트 구조
+# Project Struct
 ---
 <pre>
 src
@@ -30,25 +29,86 @@ src
 │   │   └── com
 │   │       └── ohnew
 │   │           └── ohnew
+│   │               ├── OhnewApplication.java     # 메인 실행 클래스
 │   │               ├── apiPayload
 │   │               │   ├── code
-│   │               │   │   ├── exception   # 커스텀 예외 처리
-│   │               │   │   └── status      # 에러 코드 정의
-│   │               │   └── ApiResponse.java        # 공통 응답 DTO
-│   │               ├── common              # 공통 유틸/설정 (예: PythonApi, Swagger, Security 등)
-│   │               │   ├── config
-│   │               │   └── security
-│   │               ├── controller
-│   │               ├── converter
+│   │               │   │   ├── exception         # 커스텀 예외 처리
+│   │               │   │   └── status            # 에러 코드 정의
+│   │               │   └── ApiResponse.java      # 공통 응답 DTO
+│   │               ├── common
+│   │               │   ├── config                # 설정 (Async, Redis, Swagger, WebClient 등)
+│   │               │   └── security              # 보안 (JWT, 필터, SecurityConfig 등)
+│   │               │       └── handler           # Security 관련 핸들러
+│   │               ├── controller                # REST 컨트롤러
+│   │               │   ├── ChatController.java
+│   │               │   ├── NewsController.java
+│   │               │   ├── SocialLoginController.java
+│   │               │   ├── SocialLoginPageController.java
+│   │               │   └── UserController.java
+│   │               ├── converter                 # DTO ↔ Entity 변환
+│   │               │   ├── ChatConverter.java
+│   │               │   ├── NewsConverter.java
+│   │               │   └── UserConverter.java
 │   │               ├── dto
+│   │               │   ├── req                   # 요청 DTO
+│   │               │   │   ├── ChatbotReq.java
+│   │               │   │   ├── TokenDtoReq.java
+│   │               │   │   ├── UserDtoReq.java
+│   │               │   │   └── UserPreferenceDtoReq.java
+│   │               │   └── res                   # 응답 DTO
+│   │               │       ├── ChatDtoRes.java
+│   │               │       ├── KakaoTokenResponseDto.java
+│   │               │       ├── KakaoUserInfoResponseDto.java
+│   │               │       ├── NewsByMultiRssRes.java
+│   │               │       ├── NewsByPythonRes.java
+│   │               │       ├── NewsByRssRes.java
+│   │               │       ├── NewsDtoRes.java
+│   │               │       ├── UserDtoRes.java
+│   │               │       └── UserPreferenceDtoRes.java
 │   │               ├── entity
+│   │               │   ├── enums
+│   │               │   │   ├── ChatSender.java
+│   │               │   │   ├── NewsStyle.java
+│   │               │   │   └── Provider.java
+│   │               │   ├── ChatMessage.java
+│   │               │   ├── ChatRoom.java
+│   │               │   ├── News.java
+│   │               │   ├── NewsSummaryVariant.java
+│   │               │   ├── Scrap.java
+│   │               │   ├── User.java
+│   │               │   └── UserPreference.java
 │   │               ├── global
 │   │               │   ├── controller
+│   │               │   │   ├── HealthController.java
+│   │               │   │   └── TimeCheckController.java
 │   │               │   └── util
-│   │               ├── repository
-│   │               └── service
-│   └── resource 
-└── TEST # JUnit 테스트 관련
+│   │               │       └── CookieUtil.java
+│   │               ├── repository                # JPA Repository
+│   │               │   ├── ChatMessageRepository.java
+│   │               │   ├── ChatRoomRepository.java
+│   │               │   ├── NewsRepository.java
+│   │               │   ├── NewsSummaryVariantRepository.java
+│   │               │   ├── ScrapRepository.java
+│   │               │   ├── UserPreferenceRepository.java
+│   │               │   └── UserRepository.java
+│   │               └── service                   # 비즈니스 로직
+│   │                   ├── ChatService.java
+│   │                   ├── ChatServiceImpl.java
+│   │                   ├── KakaoService.java
+│   │                   ├── NewsService.java
+│   │                   ├── NewsServiceImpl.java
+│   │                   ├── NewsVariantService.java
+│   │                   ├── RssServiceImpl.java
+│   │                   ├── UserPreferenceService.java
+│   │                   ├── UserService.java
+│   │                   └── UserServiceImpl.java
+│   └── resources
+│       ├── application.yml
+│       ├── application-deploy.yml   # DB, Redis, OAuth2.0 환경변수로 적용해둔 설정 파일
+│       ├── static
+│       └── templates
+│
+└── test
 </pre>
 ---
 
