@@ -23,35 +23,32 @@
 
 # 프로젝트 구조
 ---
-'''
-
+<pre>
 src
-└── main
-    ├── java
-    │   └── com
-    │       └── ohnew
-    │           └── ohnew
-    │               ├── apiPayload
-    │               │   ├── code
-    │               │   │   ├── exception   # 커스텀 예외 처리
-    │               │   │   └── status      # 에러 코드 정의
-    │               │   └── response        # 공통 응답 DTO
-    │               ├── common              # 공통 유틸/설정 (예: PythonApi, Swagger, Security 등)
-    │               │   ├── config
-    │               │   └── security
-    │               ├── controller
-    │               ├── converter
-    │               ├── dto
-    │               ├── entity
-    │               ├── global
-    │               │   ├── controller
-    │               │   └── util
-    │               ├── repository
-    │               └── service
-    ├── resource
-
-
-         
-'''
+├── main
+│   ├── java
+│   │   └── com
+│   │       └── ohnew
+│   │           └── ohnew
+│   │               ├── apiPayload
+│   │               │   ├── code
+│   │               │   │   ├── exception   # 커스텀 예외 처리
+│   │               │   │   └── status      # 에러 코드 정의
+│   │               │   └── ApiResponse.java        # 공통 응답 DTO
+│   │               ├── common              # 공통 유틸/설정 (예: PythonApi, Swagger, Security 등)
+│   │               │   ├── config
+│   │               │   └── security
+│   │               ├── controller
+│   │               ├── converter
+│   │               ├── dto
+│   │               ├── entity
+│   │               ├── global
+│   │               │   ├── controller
+│   │               │   └── util
+│   │               ├── repository
+│   │               └── service
+│   └── resource 
+└── TEST # JUnit 테스트 관련
+</pre>
 ---
 
